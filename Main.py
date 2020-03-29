@@ -5,6 +5,7 @@ import Activation_functions as af
 import configparser
 import sys
 import os
+import Visualizer as v
 from MLP import MLP
 
 
@@ -27,7 +28,7 @@ def get_data_for_learning(learning_set_path, testing_set_path):
     learning_set = learning.iloc[:, :-1]
     learning_answers = learning.iloc[:, -1]
     testing_set = testing.iloc[:, :-1]
-    testing_answers = learning.iloc[:, -1]
+    testing_answers = testing.iloc[:, -1]
 
     return learning_set, learning_answers, testing_set, testing_answers
 
@@ -80,8 +81,6 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
 
     perceptron.learn(learning_set, learning_answers, testing_set, testing_answers)
 
-    pass
-
 
 if __name__ == '__main__':
     learning = r'C:\Users\Dark\Downloads\MGU_projekt1\projekt1\classification\data.three_gauss.train.100.csv'
@@ -91,6 +90,5 @@ if __name__ == '__main__':
         print("usage: Main.py path_to_learning_set.csv path_to_testing_set.csv")
     else:
         prepare_and_run_perceptron(sys.argv[1], sys.argv[2])
-
 
 
