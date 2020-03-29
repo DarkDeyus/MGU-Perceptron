@@ -45,7 +45,7 @@ def tanh(x: np.array) -> np.array:
 
 
 def tanh_derivative(x: np.array) -> np.array:
-    return 1 - np.tanh(x) ** 2
+    return 1 - np.power(np.tanh(x), 2)
 
 
 def reLU(x: np.array) -> np.array:
