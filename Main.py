@@ -42,30 +42,39 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
 
     true_false_converter = {'yes': True, 'no': False}
 
-    classification = config['Parameters']['classification']
-    classificator = true_false_converter[classification]
+    functions = {'sigmoid': af.ActivationFunction(af.sigmoid, af.sigmoid_derivative),
+                 'tanh': af.ActivationFunction(af.tanh, af.tanh_derivative),
+                 'reLU': af.ActivationFunction(af.reLU, af.reLU_derivative),
+                 'identity': af.ActivationFunction(af.identity, af.identity_derivative),
+                 'leakyReLU': af.ActivationFunction(af.leakyReLU, af.leakyReLU_derivative)}
+
+    classification = true_false_converter.get(config['Parameters']['classification'], None)
+    if classification is None:
+        raise ValueError("Incorrect classification or regression setting")
+        return
+
+    activation_function = functions.get(config['Parameters']['activation function'], None)
+    if activation_function is None:
+        raise ValueError("Incorrect activation function")
+        return
+
+    bias = true_false_converter.get(config['Parameters']['bias'], None)
+    if bias is None:
+        raise ValueError("Incorrect bias setting")
+        return
 
     layers = config['Parameters']['number of neurons in each layer']
     layers = [int(x.strip()) for x in layers.split(',')]
-
-    functions = {'sigmoid': af.ActivationFunction(af.sigmoid_vec, af.sigmoid_derivative_vec),
-                 'tanh': af.tanh,
-                 'reLU': af.reLU,
-                 'identity': af.identity,
-                 'leakyReLU': af.leakyReLU}
-
-    activation_function = config['Parameters']['activation function']
-    activation_function = functions[activation_function]
 
     epochs = int(config['Parameters']['epochs'])
     batch_size = int(config['Parameters']['batch size'])
     learning_rate = float(config['Parameters']['learning rate'])
     momentum = float(config['Parameters']['momentum'])
-    bias = true_false_converter[config['Parameters']['bias']]
     rng_seed = int(config['Parameters']['rng seed'])
 
     # print(f'{layers}, {activation_function}, {batch_size}, {epochs}, {learning_rate}, {momentum}, {bias}, {rng_seed}, {classificator}')
-    perceptron = MLP(layers, activation_function, batch_size, epochs, learning_rate, momentum, bias, rng_seed, classificator)
+    perceptron = MLP(layers, activation_function, batch_size, epochs,
+                     learning_rate, momentum, bias, rng_seed, classification)
 
     (learning_set, learning_answers, testing_set, testing_answers) = get_data_for_learning(learning_set_path, testing_set_path)
 
