@@ -1,6 +1,7 @@
 from typing import List
 import Neural_network as nn
 import Activation_functions as af
+import Visualizer as v
 import numpy as np
 import pandas as pd
 
@@ -57,7 +58,7 @@ def main():
     m2 = np.hstack((m/5, m[:, [0]]))
     df = pd.DataFrame(m2, columns=list("abcdef"))
     batch_size = s//2
-    epochs = 10000
+    epochs = 100
     learning_rate = 0.001
     momentum = 0.001
     bias = True
@@ -73,6 +74,7 @@ def main():
     res = mlp.predict(df)
     print(df)
     print(res)
+    v.show_edges_weight(mlp)
 
 
 if __name__ == "__main__":

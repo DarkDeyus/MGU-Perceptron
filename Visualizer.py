@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sn
 import pandas as pd
+import networkx as nx
+import MLP
 
 
 def visualize_errors(learning_set_error, testing_set_error):
@@ -57,4 +59,55 @@ def confusion_matrix(class_actual, class_predicted):
     sn.heatmap(matrix, annot=True, cmap=cmap, linecolor='black',
                linewidths=0.5, rasterized=False)
     plt.title('Confusion Matrix')
+    plt.show()
+
+
+def show_edges_weight(perceptron: MLP.MLP):
+    dense = nx.Graph()
+    layers = perceptron.net.layers
+    previous_layer = {}
+    current_row = 0
+    all_neurons = {}
+
+    for layer_number in range(len(layers)):
+        curr_neuron_layer_count = layers[layer_number].weights.shape[0]
+        prev_neuron_layer_count = layers[layer_number].weights.shape[1]
+        if prev_neuron_layer_count != len(previous_layer):
+            part = {i + current_row: (layer_number, i) for i in
+                               range(len(previous_layer), prev_neuron_layer_count)}
+            previous_layer = {**previous_layer, **part}
+        #merge dictionaries, adding previous layer
+        all_neurons = {**all_neurons, **previous_layer}
+
+        if current_row == 0:
+            current_row = 1000
+        else:
+            current_row *= 1000
+
+        current_layer = {i + current_row: (layer_number + 1, i) for i in
+                         range(0, curr_neuron_layer_count)}
+
+        #add edges with weights
+        i = 0
+        j = 0
+        for curr_neuron in current_layer:
+            for prev_neuron in previous_layer:
+                dense.add_edge(curr_neuron, prev_neuron, weight=round(layers[layer_number].weights[i, j], 2))
+                j += 1
+            i += 1
+            j = 0
+
+        previous_layer = current_layer
+
+    all_neurons = {**all_neurons, **previous_layer}
+
+    nx.draw_networkx_nodes(dense, all_neurons,
+                           nodelist=all_neurons.keys(), node_color='black')
+    nx.draw_networkx_edges(dense, all_neurons, edge_color='green')
+    labels = nx.get_edge_attributes(dense, 'weight')
+    nx.draw_networkx_edge_labels(dense, all_neurons, edge_labels=labels,
+                                 alpha=0.7, label_pos=0.78, font_size=7,
+                                 bbox=dict(color='white', alpha=0.7, edgecolor=None))
+    axes = plt.axis('off')
+
     plt.show()
