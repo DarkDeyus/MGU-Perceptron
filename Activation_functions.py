@@ -28,6 +28,7 @@ def mean_squared_error_derivative(result: np.array, expected: np.array) -> np.ar
     res = 2*(result - expected)/result.shape[0]
     return res
 
+
 mean_squared_error_function = ErrorFunction(mean_squared_error, mean_squared_error_derivative)
 
 def sigmoid(x: np.array) -> np.array:
@@ -36,10 +37,6 @@ def sigmoid(x: np.array) -> np.array:
 def sigmoid_derivative(x: np.array) -> np.array:
     y = sigmoid(x)
     return np.multiply(y, (1 - y))
-
-def sigmoid_derivative(x: np.array) -> np.array:
-    y = sigmoid_vec(x)
-    return np.multiply(y, 1-y)
 
 def tanh(x: np.array) -> np.array:
     return np.tanh(x)
@@ -69,7 +66,8 @@ def leakyReLU_derivative(x: np.array) -> np.array:
     dx[x < 0] = 0.01
     return dx
 
+
 sigmoid_activation_function = ActivationFunction(sigmoid, sigmoid_derivative)
+tanh_activation_function = ActivationFunction(tanh, tanh_derivative)
 identity_activation_function = ActivationFunction(identity, identity_derivative)
 leakyReLU_activation_function = ActivationFunction(leakyReLU, leakyReLU_derivative)
-

@@ -86,11 +86,16 @@ class NeuralNetwork:
         self.model_created = False
         self.fit_params = None
 
-    def _choose_train_data(self, X: pd.DataFrame, Y: pd.DataFrame,
-                           fit_params: FitParams) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        choice = np.random.choice(np.arange(X.shape[0]),
-                                  fit_params.batch_size)
-        return (pd.DataFrame(X.iloc[choice, :]), pd.DataFrame(Y.iloc[choice, :]))
+    def _split_train_data(self, X: pd.DataFrame, Y: pd.DataFrame,
+                           fit_params: FitParams) -> List[Tuple[pd.DataFrame, pd.DataFrame]]:
+        indices = np.arange(0, X.shape[0])
+        np.random.shuffle(indices)
+        split_no = X.shape[0]//fit_params.batch_size + (1 if X.shape[0] % fit_params.batch_size != 0 else 0)
+        indices_split = np.array_split(indices, split_no)
+        res = []
+        for split in indices_split:
+            res.append((pd.DataFrame(X.iloc[split, :]), pd.DataFrame(Y.iloc[split, :])))
+        return res
 
     def _prepare_layers(self, hidden_layers_sizes: List[int], input_size: int,
                         output_size: int, fit_params: FitParams) -> None:
@@ -103,13 +108,13 @@ class NeuralNetwork:
           sizes[-2], sizes[-1], fit_params.bias, fit_params.bias, fit_params.activation_function))
 
     def _iterate_fit(self, X: pd.DataFrame, Y: pd.DataFrame,
-                     fit_params: FitParams) -> Tuple[List[np.matrix, float]]:
+                     fit_params: FitParams) -> Tuple[List[np.matrix], float]:
         inputs_all = []
         products_all = []
-        deltas = []
+        changes = []
         total_error = 0.0
         for layer in self.layers:
-            deltas.append(np.zeros_like(layer.weights))
+            changes.append(np.zeros_like(layer.weights))
         for i in range(len(X)):
             expected_output = np.array(Y.iloc[i, :].values[0])
             first_input = np.array(X.iloc[i, :])
@@ -131,32 +136,35 @@ class NeuralNetwork:
             error = self.error.function(inputs[-1], expected_output)
             total_error += error
             error_grad = self.error.gradient(inputs[-1], expected_output)
-            for i in reversed(range(len(self.layers))):
-                layer = self.layers[i]
-                product = products[i]
-                input = inputs[i]
-                if i == len(self.layers) - 1:
+            local_deltas = [None] * len(self.layers)
+            for k in reversed(range(len(self.layers))):
+                layer = self.layers[k]
+                product = products[k]
+                input = inputs[k]
+                if k == len(self.layers) - 1:
                     delta = layer.process_backwards_last(product, error_grad)
                 else:
-                    next_layer = self.layers[i+1]
+                    next_layer = self.layers[k+1]
                     no_bias_weights = next_layer.weights[:, :-1] if next_layer.bias else next_layer.weights
                     delta = layer.process_backwards(product, delta, no_bias_weights)
-                deltas[i] += layer.calc_change(input, delta)
+                local_deltas[k] = delta
+                changes[k] += layer.calc_change(input, delta)
         avg_error = total_error/len(X)
-        for delta in deltas:
-            delta /= len(X)
-        return (deltas, avg_error)
+        for i_change in range(len(changes)):
+            changes[i_change] = changes[i_change]/len(X)
+        return (changes, avg_error)
 
     def fit(self, Xdf: pd.DataFrame, Ydf: pd.DataFrame, fit_params: FitParams) -> None:
-        fit_params.x_column_names = list(Xdf.columns)
-        fit_params.y_column_names = list(Ydf.columns)
         if self.model_created:
             raise RuntimeError("Model was already trained")
+        fit_params.x_column_names = list(Xdf.columns)
+        fit_params.y_column_names = list(Ydf.columns)
+        self.fit_params = fit_params
         X = Xdf
         Y_org = Ydf
         input_size = len(fit_params.x_column_names)
         if fit_params.classification:
-            self.Y = Y_org.drop_duplicates()
+            self.Y = Y_org.drop_duplicates().reset_index(drop=True)
             self.clf_dict = {}
             self.clf_reverse_dict = {}
             output_size = len(self.Y)
@@ -180,16 +188,17 @@ class NeuralNetwork:
         prev_changes = [None] * len(self.layers)
         self.model_created = True
         for k in range(fit_params.epochs):
-            (X_it, Y_it) = self._choose_train_data(X, Y_org, fit_params)
-            (deltas, avg_error) = self._iterate_fit(X_it, Y_it, fit_params)
-            if fit_params.iter_callback is not None:
-                res = fit_params.iter_callback(self, avg_error, k)
-                if not res:
-                    break
-            for i in range(len(self.layers)):
-                prev_changes[i] = self.layers[i].update(deltas[i], prev_changes[i],
-                                                        fit_params.learning_rate, fit_params.momentum)
-        self.fit_params = fit_params
+            XY_arr = self._split_train_data(X, Y_org, fit_params)
+            for (iter_no, XY) in enumerate(XY_arr):
+                (X_it, Y_it) = XY
+                (changes, avg_error) = self._iterate_fit(X_it, Y_it, fit_params)
+                if fit_params.iter_callback is not None:
+                    res = fit_params.iter_callback(self, avg_error, k, iter_no)
+                    if not res:
+                        break
+                for i in range(len(self.layers)):
+                    prev_changes[i] = self.layers[i].update(changes[i], prev_changes[i],
+                                                            fit_params.learning_rate, fit_params.momentum)
 
     def fit_df(self, df: pd.DataFrame, fit_params: FitParams) -> None:
         self.fit(pd.DataFrame(df[fit_params.x_column_names]),
@@ -199,14 +208,16 @@ class NeuralNetwork:
 
     def predict(self, df: pd.DataFrame) -> pd.DataFrame:
         if not self.model_created:
-            raise RuntimeError("Model was not trained")
+            raise RuntimeError("Model was not created")
         results = []
         for i in range(len(df)):
             result = self._predict_single_raw(np.array(df.loc[[i], self.fit_params.x_column_names].values[0]))
             results.append(result)
         if self.fit_params.classification:
             cls_no = np.argmax(results, axis=1)
-            return pd.DataFrame(self.Y.iloc[cls_no, :])
+            res_df = pd.DataFrame(self.Y.loc[cls_no, :])
+            res_df.reset_index(drop=True, inplace=True)
+            return res_df
         else:
             return pd.DataFrame(results, columns=self.Y.columns)
 
