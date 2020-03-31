@@ -185,6 +185,7 @@ class NeuralNetwork:
                 axis = 1
             ))
         self._prepare_layers(self.hidden_layers_sizes, input_size, output_size, fit_params)
+        self.layers[-1].activation = af.identity_activation_function
         prev_changes = [None] * len(self.layers)
         self.model_created = True
         for k in range(fit_params.epochs):

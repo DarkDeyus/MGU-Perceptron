@@ -84,11 +84,11 @@ def main():
     lm = np.array([np.linspace(0, 1, s)]).T
     lmy = np.power(lm, 1)
     Xdf = pd.DataFrame(lm, columns=["X"])
-    Ydf = pd.DataFrame(lmy, columns=["Y"])
+    Ydf = pd.DataFrame(lmy < 0.5, columns=["Y"])
     lm_test = np.array([np.linspace(0, 1, 5*s)]).T
     lmy_test = np.power(lm_test, 1)
     Xt_df = pd.DataFrame(lm_test, columns=["X"])
-    Yt_df = pd.DataFrame(lmy_test, columns=["Y"])
+    Yt_df = pd.DataFrame(lmy_test < 0.5, columns=["Y"])
 
 
     m = np.hstack((lm, lm, lm, lm, lm))
@@ -98,14 +98,14 @@ def main():
     #m = np.outer(np.array(list(range(s))), np.array([1/s, 1/s, 1/s, 1/s, 1/s]))
     #m2 = np.hstack((m, af.sigmoid_vec(m[:, [0]])))
     df = pd.DataFrame(m2, columns=list("abcdef"))
-    batch_size = s//2
-    epochs = 10000
-    learning_rate = 0.01
-    momentum = 0.001
+    batch_size = s
+    epochs = 5000
+    learning_rate = 0.1
+    momentum = 0
     bias = False
-    rng = 1337
-    classification = False
-    hidden_layers_sizes = []
+    rng = 12369666
+    classification = True
+    hidden_layers_sizes = [5]
     x_columns = list("a")
     y_columns = ["f"]
     X = pd.DataFrame(df.loc[:, x_columns])
@@ -113,7 +113,7 @@ def main():
     activation_function = af.sigmoid_activation_function
 
     def it_cb(perceptron, avg_error, epoch, iter):
-        print_iter(perceptron, avg_error, epoch, iter, X, Y, X, Y)
+        return print_iter(perceptron, avg_error, epoch, iter, X, Y, X, Y)
 
     global mlp
     mlp = MLP(hidden_layers_sizes, activation_function, batch_size, epochs,
