@@ -32,32 +32,38 @@ def visualize_regression(x_learning, y_learning, x_testing, y_testing, y_predict
     pass
 
 
-def visualize_classification(perceptron, x_testing, y_testing, class_predicted):
-    x_min, x_max = np.min(x_testing) - 1, np.max(x_testing) + 1
-    y_min, y_max = np.min(y_testing) - 1, np.max(y_testing) + 1
+def visualize_classification(perceptron, x_testing, class_predicted):
+    # only for points
+    class_prediction = class_predicted.squeeze()
+    x_values = x_testing.iloc[:, 0].to_numpy()
+    y_values = x_testing.iloc[:, 1].to_numpy()
+    x_min, x_max = np.min(x_values) - 1, np.max(x_values) + 1
+    y_min, y_max = np.min(y_values) - 1, np.max(y_values) + 1
 
-    # get the points separated by 0.01
-    step_size = 0.01
-    x_points = np.arange(x_min, x_max, step_size)
-    y_points = np.arange(y_min, y_max, step_size)
+    # get the points
+    number_of_points = 100
+    x_points = np.linspace(x_min, x_max, number_of_points)
+    y_points = np.linspace(y_min, y_max, number_of_points)
     xx, yy = np.meshgrid(x_points, y_points)
 
     # ravel flattens the array, c_ connects two arrays together, getting all points coords
-    z = perceptron.predict(np.c_[xx.ravel(), yy.ravel()])  # fix for perceptron predict call
-    z = z.reshape(xx.shape)
+    point_coords = np.c_[xx.ravel(), yy.ravel()]
+    coords = pd.DataFrame(data=point_coords, columns=perceptron.net.fit_params.x_column_names)
+    z = perceptron.predict(coords)
+    z = z.squeeze().values.reshape(xx.shape)
     plt.contourf(xx, yy, z)  # , alpha=0.4)
-    plt.scatter(x_testing, y_testing, c=class_predicted, edgecolor='black')  # , s=20
+    plt.scatter(x_values, y_values, c=class_prediction, edgecolor='black')  # , s=20
     plt.show()
 
 
 def confusion_matrix(class_actual, class_predicted):
-    data = {'Actual class': class_actual, 'Predicted class': class_predicted}
+    data = {'Actual class': class_actual.squeeze().tolist(), 'Predicted class': class_predicted.squeeze().tolist()}
     df = pd.DataFrame(data)
     matrix = pd.crosstab(df['Actual class'], df['Predicted class'],
                          rownames=['Actual class'], colnames=['Predicted class'])
     cmap = sn.cubehelix_palette(light=1, as_cmap=True)
     sn.heatmap(matrix, annot=True, cmap=cmap, linecolor='black',
-               linewidths=0.5, rasterized=False)
+               linewidths=0.5, rasterized=False,fmt='g')
     plt.title('Confusion Matrix')
     plt.show()
 
@@ -72,6 +78,7 @@ def show_edges_weight(perceptron: MLP.MLP):
     for layer_number in range(len(layers)):
         curr_neuron_layer_count = layers[layer_number].weights.shape[0]
         prev_neuron_layer_count = layers[layer_number].weights.shape[1]
+        # that means that bias exists
         if prev_neuron_layer_count != len(previous_layer):
             part = {i + current_row: (layer_number, i) for i in
                                range(len(previous_layer), prev_neuron_layer_count)}
@@ -92,7 +99,12 @@ def show_edges_weight(perceptron: MLP.MLP):
         j = 0
         for curr_neuron in current_layer:
             for prev_neuron in previous_layer:
-                dense.add_edge(curr_neuron, prev_neuron, weight=round(layers[layer_number].weights[i, j], 2))
+                weight = round(layers[layer_number].weights[i, j], 2)
+                if weight < 0:
+                    weight = f"—{abs(weight)}"
+                else:
+                    weight = str(weight)
+                dense.add_edge(curr_neuron, prev_neuron, weight=weight)
                 j += 1
             i += 1
             j = 0
@@ -106,8 +118,8 @@ def show_edges_weight(perceptron: MLP.MLP):
     nx.draw_networkx_edges(dense, all_neurons, edge_color='green')
     labels = nx.get_edge_attributes(dense, 'weight')
     nx.draw_networkx_edge_labels(dense, all_neurons, edge_labels=labels,
-                                 alpha=0.7, label_pos=0.78, font_size=7,
-                                 bbox=dict(color='white', alpha=0.7, edgecolor=None))
+                                 alpha=0.9, label_pos=0.78, font_size=7,
+                                 bbox=dict(color='white', alpha=0.9, edgecolor=None))
     axes = plt.axis('off')
 
     plt.show()
