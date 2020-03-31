@@ -34,6 +34,8 @@ def mean_squared_error_derivative(result: np.array, expected: np.array) -> np.ar
 def sigmoid(x: np.array) -> np.array:
     return 1 / (1 + np.exp(-x))
 
+def sigmoid_inverse(x: np.array) -> np.array:
+    return -np.log(1/x - 1)
 
 def sigmoid_derivative(x: np.array) -> np.array:
     y = sigmoid(x)

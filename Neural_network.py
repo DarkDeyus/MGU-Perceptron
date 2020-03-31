@@ -36,7 +36,8 @@ class NeuralNetworkLayer:
 
     def process_backwards(self, product: np.array, next_delta: np.array, next_weights: np.matrix) -> np.array:
         gradient = self.activation.gradient(product)
-        delta = np.multiply(gradient, np.matmul(next_weights.T, next_delta))
+        output_grad = np.matmul(next_weights.T, next_delta)
+        delta = np.multiply(gradient, output_grad)
         return delta
 
     def process_backwards_last(self, product: np.array,
@@ -55,7 +56,7 @@ class NeuralNetworkLayer:
             prev_change = np.zeros_like(self.weights)
         total_change = momentum * prev_change + learning_rate * change
         self.weights -= total_change
-        return -total_change
+        return total_change
 
 
 class FitParams:
@@ -105,12 +106,11 @@ class NeuralNetwork:
             self.layers.append(NeuralNetworkLayer.create_random(
               sizes[i], sizes[i+1], fit_params.bias, fit_params.bias, fit_params.activation_function))
         self.layers.append(NeuralNetworkLayer.create_random(
-          sizes[-2], sizes[-1], fit_params.bias, fit_params.bias, fit_params.activation_function))
+          sizes[-2], sizes[-1], fit_params.bias, fit_params.bias,
+          fit_params.activation_function if fit_params.classification else af.sigmoid_activation_function))
 
     def _iterate_fit(self, X: pd.DataFrame, Y: pd.DataFrame,
                      fit_params: FitParams) -> Tuple[List[np.matrix], float]:
-        inputs_all = []
-        products_all = []
         changes = []
         total_error = 0.0
         for layer in self.layers:
@@ -131,8 +131,6 @@ class NeuralNetwork:
                 else:
                     next_input = output
                 inputs.append(next_input)
-            products_all.append(products)
-            inputs_all.append(inputs)
             error = self.error.function(inputs[-1], expected_output)
             total_error += error
             error_grad = self.error.gradient(inputs[-1], expected_output)
@@ -189,16 +187,20 @@ class NeuralNetwork:
         self.model_created = True
         for k in range(fit_params.epochs):
             XY_arr = self._split_train_data(X, Y_org, fit_params)
+            flag = True
             for (iter_no, XY) in enumerate(XY_arr):
                 (X_it, Y_it) = XY
                 (changes, avg_error) = self._iterate_fit(X_it, Y_it, fit_params)
                 if fit_params.iter_callback is not None:
                     res = fit_params.iter_callback(self, avg_error, k, iter_no)
                     if not res:
+                        flag = False
                         break
                 for i in range(len(self.layers)):
                     prev_changes[i] = self.layers[i].update(changes[i], prev_changes[i],
                                                             fit_params.learning_rate, fit_params.momentum)
+            if not flag:
+                break
 
     def fit_df(self, df: pd.DataFrame, fit_params: FitParams) -> None:
         self.fit(pd.DataFrame(df[fit_params.x_column_names]),
