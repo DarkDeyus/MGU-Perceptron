@@ -32,13 +32,23 @@ def get_data_for_learning(learning_set_path, testing_set_path):
 
     return learning_set, learning_answers, testing_set, testing_answers
 
+
 def ask_to_see_visualisation(name_of_visualisation: str) -> bool:
 
-    choice = input(f"Write 'y' if you want to see {name_of_visualisation}, 'n' otherwise")
+    choice = input(f"Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise")
     while choice.lower() not in {'y', 'n'}:
         print("Incorrect option. Try again.")
         choice = input("Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise")
     return choice.lower() == 'y'
+
+#todo -> nie działa, sa zle wyniki
+def minMaxScale(X: pd.DataFrame) -> pd.DataFrame:
+    def minMaxSeries(s: pd.Series):
+        min = s.min()
+        max = s.max()
+        return (s - min) / (max - min)
+
+    return X.apply(minMaxSeries)
 
 
 def prepare_and_run_perceptron(learning_set_path, testing_set_path):
@@ -49,6 +59,7 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
     print("Loading data...")
     (learning_set, learning_answers, testing_set, testing_answers) = get_data_for_learning(learning_set_path, testing_set_path)
 
+    a = minMaxScale(learning_set)
     print("Loading perceptron parameters...")
     config = configparser.ConfigParser()
     config.read('./parameters.ini')
@@ -105,18 +116,22 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
         if ask_to_see_visualisation("result of regression"):
             v.visualize_regression(learning_set, learning_answers, testing_set, testing_answers, result)
     if ask_to_see_visualisation("graph of errors over iterations"):
-        v.visualize_errors([], []) #todo
+        v.visualize_errors([], []) #todo, brak funkcji wyciagajacej bledy po kazdej iteracji dla obu zbiorow
     if ask_to_see_visualisation("result model with weights"):
         v.show_edges_weight(perceptron)
 
 if __name__ == '__main__':
-    learning_classification = r'C:\Users\Dark\Downloads\MGU_projekt1\projekt1\classification\data.three_gauss.train.100.csv'
-    testing_classification = r'C:\Users\Dark\Downloads\MGU_projekt1\projekt1\classification\data.three_gauss.test.100.csv'
+    learning_classification = r'.\data.XOR.train.500.csv'
+    testing_classification = r'.\data.XOR.test.500.csv'
+
+    learn_reg = r'.\data.square.train.100.csv'
+    test_reg = r'.\data.square.test.100.csv'
 
     learning_regression = r'.\data.activation.train.500.csv'
     testing_regression = r'.\data.activation.test.500.csv'
-    #prepare_and_run_perceptron(learning_classification, testing_classification)
-    prepare_and_run_perceptron(learning_regression, testing_regression)
+    prepare_and_run_perceptron(learning_classification, testing_classification)
+    #prepare_and_run_perceptron(learning_regression, testing_regression)
+    #prepare_and_run_perceptron(learn_reg, test_reg)
     sys.exit(0)
 
     if len(sys.argv) != 3:

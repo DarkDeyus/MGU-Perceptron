@@ -34,9 +34,8 @@ def visualize_regression(x_learning, y_learning, x_testing, y_testing, y_predict
 
 def visualize_classification(perceptron, x_testing, class_predicted):
     # only for points
-    #class_prediction = class_predicted.squeeze().tolist()
-    x_values = x_testing.iloc[:, 0].to_numpy()
     class_prediction = class_predicted.squeeze()
+    x_values = x_testing.iloc[:, 0].to_numpy()
     y_values = x_testing.iloc[:, 1].to_numpy()
     x_min, x_max = np.min(x_values) - 1, np.max(x_values) + 1
     y_min, y_max = np.min(y_values) - 1, np.max(y_values) + 1
@@ -79,6 +78,7 @@ def show_edges_weight(perceptron: MLP.MLP):
     for layer_number in range(len(layers)):
         curr_neuron_layer_count = layers[layer_number].weights.shape[0]
         prev_neuron_layer_count = layers[layer_number].weights.shape[1]
+        # that means that bias exists
         if prev_neuron_layer_count != len(previous_layer):
             part = {i + current_row: (layer_number, i) for i in
                                range(len(previous_layer), prev_neuron_layer_count)}
@@ -99,7 +99,12 @@ def show_edges_weight(perceptron: MLP.MLP):
         j = 0
         for curr_neuron in current_layer:
             for prev_neuron in previous_layer:
-                dense.add_edge(curr_neuron, prev_neuron, weight=round(layers[layer_number].weights[i, j], 2))
+                weight = round(layers[layer_number].weights[i, j], 2)
+                if weight < 0:
+                    weight = f"—{abs(weight)}"
+                else:
+                    weight = str(weight)
+                dense.add_edge(curr_neuron, prev_neuron, weight=weight)
                 j += 1
             i += 1
             j = 0
@@ -113,8 +118,8 @@ def show_edges_weight(perceptron: MLP.MLP):
     nx.draw_networkx_edges(dense, all_neurons, edge_color='green')
     labels = nx.get_edge_attributes(dense, 'weight')
     nx.draw_networkx_edge_labels(dense, all_neurons, edge_labels=labels,
-                                 alpha=0.7, label_pos=0.78, font_size=7,
-                                 bbox=dict(color='white', alpha=0.7, edgecolor=None))
+                                 alpha=0.9, label_pos=0.78, font_size=7,
+                                 bbox=dict(color='white', alpha=0.9, edgecolor=None))
     axes = plt.axis('off')
 
     plt.show()
