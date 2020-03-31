@@ -17,12 +17,14 @@ class ErrorFunction:
         self.function = error_function
         self.gradient = gradient
 
-def mean_squared_error(result: np.array, expected: np.array) -> np.array:
-    res = np.power(expected - result, 2)
+def mean_squared_error(result: np.array, expected: np.array) -> float:
+    sub = np.subtract(result, expected)
+    squared = np.square(sub)
+    res = squared.mean()
     return res
 
 def mean_squared_error_derivative(result: np.array, expected: np.array) -> np.array:
-    res = 2*(result - expected)
+    res = 2*(result - expected)/result.shape[0]
     return res
 
 
@@ -32,16 +34,20 @@ def sigmoid(x: float) -> float:
     return 1 / (1 + math.exp(-x))
 
 def sigmoid_derivative(x: float) -> float:
-    return sigmoid(x) * sigmoid(1-x)
+    y = sigmoid(x)
+    return y*(1-y)
 
 def sigmoid_vec(x: np.array) -> float:
     return 1 / (1 + np.exp(-x))
 
 def sigmoid_derivative_vec(x: np.array) -> np.array:
-    return np.multiply(sigmoid_vec(x), (1-sigmoid_vec(x)))
+    y = sigmoid_vec(x)
+    return np.multiply(y, 1-y)
 
 
 sigmoid_activation_function = ActivationFunction(sigmoid_vec, sigmoid_derivative_vec)
+
+identity_activation_function = ActivationFunction(sigmoid_vec, sigmoid_derivative_vec)
 
 def tanh(x: float) -> float:
     return 2 * sigmoid(2 * x) - 1
@@ -54,6 +60,13 @@ def reLU(x: float) -> float:
 def identity(x: float) -> float:
     return x
 
+def identity_vec(x: np.array) -> np.array:
+    return x
+
+def identity_vec_derivative(x: np.array) -> np.array:
+    return np.ones_like(x)
+
+identity_activation_function = ActivationFunction(identity_vec, identity_vec_derivative)
 
 def leakyReLU(x: float) -> float:
     return 0.01 * x if x < 0 else x
