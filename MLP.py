@@ -7,7 +7,13 @@ import pandas as pd
 
 def print_iter(net: nn.NeuralNetwork, avg_error: float, i: int) -> bool:
     if i % 25 == 0:
+        print("--------------------------------")
         print(f"Iter {i}: error {avg_error}")
+#        for (i, l) in enumerate(net.layers):
+#            print(f"Layer {i}")
+#            print(l.weights)
+#            print("\n")
+#        print("\n")
     return True
 class MLP:
     """
@@ -42,11 +48,17 @@ class MLP:
         self.sizes = hidden_layer_sizes
         self.net = nn.NeuralNetwork(af.mean_squared_error_function, hidden_layer_sizes)
 
-    def fit(self, train_data: pd.DataFrame, x_columns: List[str], y_columns: List[str]) -> None:
+    def fit_df(self, train_data: pd.DataFrame, x_columns: List[str], y_columns: List[str]) -> None:
         self.fit_params = nn.FitParams(self.earning_rate, self.batch_size, self.epochs,
             self.classification, self.momentum, x_columns, y_columns, self.bias,
             self.activation_function, print_iter)
-        self.net.fit(train_data, self.fit_params)
+        self.net.fit_df(train_data, self.fit_params)
+
+    def fit(self, train_data_X: pd.DataFrame, train_data_Y: pd.DataFrame) -> None:
+        self.fit_params = nn.FitParams(self.earning_rate, self.batch_size, self.epochs,
+            self.classification, self.momentum, None, None, self.bias,
+            self.activation_function, print_iter)
+        self.net.fit(train_data_X, train_data_Y, self.fit_params)
 
     def predict(self, test_data: pd.DataFrame) -> pd.DataFrame:
         return self.net.predict(test_data)
@@ -54,23 +66,25 @@ class MLP:
 def main():
     np.random.seed(5)
     s = 10
-    m = np.random.randint(0, 4, size=(s, 5))
-    m2 = np.hstack((m/5, m[:, [0]]))
+    m = np.random.randint(0, 2, size=(s, 5))
+    m2 = np.hstack((m, m[:, [0]]))
+    #m = np.outer(np.array(list(range(s))), np.array([1/s, 1/s, 1/s, 1/s, 1/s]))
+    #m2 = np.hstack((m, af.sigmoid_vec(m[:, [0]])))
     df = pd.DataFrame(m2, columns=list("abcdef"))
     batch_size = s//2
     epochs = 100
     learning_rate = 0.001
     momentum = 0.001
-    bias = True
+    bias = False
     rng = 1337
     classification = True
-    hidden_layers_sizes = [3, 5, 2]
+    hidden_layers_sizes = [2, 2]
     x_columns = list("abcde")
     y_columns = ["f"]
     activation_function = af.sigmoid_activation_function
     mlp = MLP(hidden_layers_sizes, activation_function, batch_size, epochs,
               learning_rate, momentum, bias, rng, classification)
-    mlp.fit(df, x_columns, y_columns)
+    mlp.fit_df(df, x_columns, y_columns)
     res = mlp.predict(df)
     print(df)
     print(res)
