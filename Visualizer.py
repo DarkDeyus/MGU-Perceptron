@@ -32,32 +32,39 @@ def visualize_regression(x_learning, y_learning, x_testing, y_testing, y_predict
     pass
 
 
-def visualize_classification(perceptron, x_testing, y_testing, class_predicted):
-    x_min, x_max = np.min(x_testing) - 1, np.max(x_testing) + 1
-    y_min, y_max = np.min(y_testing) - 1, np.max(y_testing) + 1
+def visualize_classification(perceptron, x_testing, class_predicted):
+    # only for points
+    #class_prediction = class_predicted.squeeze().tolist()
+    x_values = x_testing.iloc[:, 0].to_numpy()
+    class_prediction = class_predicted.squeeze()
+    y_values = x_testing.iloc[:, 1].to_numpy()
+    x_min, x_max = np.min(x_values) - 1, np.max(x_values) + 1
+    y_min, y_max = np.min(y_values) - 1, np.max(y_values) + 1
 
-    # get the points separated by 0.01
-    step_size = 0.01
-    x_points = np.arange(x_min, x_max, step_size)
-    y_points = np.arange(y_min, y_max, step_size)
+    # get the points
+    number_of_points = 100
+    x_points = np.linspace(x_min, x_max, number_of_points)
+    y_points = np.linspace(y_min, y_max, number_of_points)
     xx, yy = np.meshgrid(x_points, y_points)
 
     # ravel flattens the array, c_ connects two arrays together, getting all points coords
-    z = perceptron.predict(np.c_[xx.ravel(), yy.ravel()])  # fix for perceptron predict call
-    z = z.reshape(xx.shape)
+    point_coords = np.c_[xx.ravel(), yy.ravel()]
+    coords = pd.DataFrame(data=point_coords, columns=perceptron.net.fit_params.x_column_names)
+    z = perceptron.predict(coords)
+    z = z.squeeze().values.reshape(xx.shape)
     plt.contourf(xx, yy, z)  # , alpha=0.4)
-    plt.scatter(x_testing, y_testing, c=class_predicted, edgecolor='black')  # , s=20
+    plt.scatter(x_values, y_values, c=class_prediction, edgecolor='black')  # , s=20
     plt.show()
 
 
 def confusion_matrix(class_actual, class_predicted):
-    data = {'Actual class': class_actual, 'Predicted class': class_predicted}
+    data = {'Actual class': class_actual.squeeze().tolist(), 'Predicted class': class_predicted.squeeze().tolist()}
     df = pd.DataFrame(data)
     matrix = pd.crosstab(df['Actual class'], df['Predicted class'],
                          rownames=['Actual class'], colnames=['Predicted class'])
     cmap = sn.cubehelix_palette(light=1, as_cmap=True)
     sn.heatmap(matrix, annot=True, cmap=cmap, linecolor='black',
-               linewidths=0.5, rasterized=False)
+               linewidths=0.5, rasterized=False,fmt='g')
     plt.title('Confusion Matrix')
     plt.show()
 

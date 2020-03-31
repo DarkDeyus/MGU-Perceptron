@@ -25,12 +25,20 @@ def get_data_for_learning(learning_set_path, testing_set_path):
     learning = pd.read_csv(learning_set_path)
     testing = pd.read_csv(testing_set_path)
 
-    learning_set = learning.iloc[:, :-1]
-    learning_answers = learning.iloc[:, -1]
-    testing_set = testing.iloc[:, :-1]
-    testing_answers = testing.iloc[:, -1]
+    learning_set = pd.DataFrame(learning.iloc[:, :-1])
+    learning_answers = pd.DataFrame(learning.iloc[:, -1])
+    testing_set = pd.DataFrame(testing.iloc[:, :-1])
+    testing_answers = pd.DataFrame(testing.iloc[:, -1])
 
     return learning_set, learning_answers, testing_set, testing_answers
+
+def ask_to_see_visualisation(name_of_visualisation: str) -> bool:
+
+    choice = input(f"Write 'y' if you want to see {name_of_visualisation}, 'n' otherwise")
+    while choice.lower() not in {'y', 'n'}:
+        print("Incorrect option. Try again.")
+        choice = input("Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise")
+    return choice.lower() == 'y'
 
 
 def prepare_and_run_perceptron(learning_set_path, testing_set_path):
@@ -38,6 +46,10 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
     if error_in_paths(learning_set_path, testing_set_path):
         return
 
+    print("Loading data...")
+    (learning_set, learning_answers, testing_set, testing_answers) = get_data_for_learning(learning_set_path, testing_set_path)
+
+    print("Loading perceptron parameters...")
     config = configparser.ConfigParser()
     config.read('./parameters.ini')
 
@@ -73,18 +85,39 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
     momentum = float(config['Parameters']['momentum'])
     rng_seed = int(config['Parameters']['rng seed'])
 
-    # print(f'{layers}, {activation_function}, {batch_size}, {epochs}, {learning_rate}, {momentum}, {bias}, {rng_seed}, {classificator}')
+    print("Creating perceptron...")
+
     perceptron = MLP(layers, activation_function, batch_size, epochs,
                      learning_rate, momentum, bias, rng_seed, classification)
 
-    (learning_set, learning_answers, testing_set, testing_answers) = get_data_for_learning(learning_set_path, testing_set_path)
+    print("Learning in progress...")
+    perceptron.fit(learning_set, learning_answers)
 
-    perceptron.learn(learning_set, learning_answers, testing_set, testing_answers)
-
+    result = perceptron.predict(testing_set)
+    print("Completed!")
+    print()
+    if classification:
+        if ask_to_see_visualisation("confusion matrix"):
+            v.confusion_matrix(testing_answers, result)
+        if ask_to_see_visualisation("result of classification"):
+            v.visualize_classification(perceptron, testing_set, result)
+    else:
+        if ask_to_see_visualisation("result of regression"):
+            v.visualize_regression(learning_set, learning_answers, testing_set, testing_answers, result)
+    if ask_to_see_visualisation("graph of errors over iterations"):
+        v.visualize_errors([], []) #todo
+    if ask_to_see_visualisation("result model with weights"):
+        v.show_edges_weight(perceptron)
 
 if __name__ == '__main__':
-    learning = r'C:\Users\Dark\Downloads\MGU_projekt1\projekt1\classification\data.three_gauss.train.100.csv'
-    testing = r'C:\Users\Dark\Downloads\MGU_projekt1\projekt1\classification\data.three_gauss.test.100.csv'
+    learning_classification = r'C:\Users\Dark\Downloads\MGU_projekt1\projekt1\classification\data.three_gauss.train.100.csv'
+    testing_classification = r'C:\Users\Dark\Downloads\MGU_projekt1\projekt1\classification\data.three_gauss.test.100.csv'
+
+    learning_regression = r'.\data.activation.train.500.csv'
+    testing_regression = r'.\data.activation.test.500.csv'
+    #prepare_and_run_perceptron(learning_classification, testing_classification)
+    prepare_and_run_perceptron(learning_regression, testing_regression)
+    sys.exit(0)
 
     if len(sys.argv) != 3:
         print("usage: Main.py path_to_learning_set.csv path_to_testing_set.csv")

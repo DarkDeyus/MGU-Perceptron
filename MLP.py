@@ -15,6 +15,8 @@ def print_iter(net: nn.NeuralNetwork, avg_error: float, i: int) -> bool:
 #            print("\n")
 #        print("\n")
     return True
+
+
 class MLP:
     """
       Multi-Layer Perceptron (MLP)
@@ -88,6 +90,8 @@ def main():
     res = mlp.predict(df)
     print(df)
     print(res)
+
+    v.visualize_classification(mlp, df, res)
     v.show_edges_weight(mlp)
 
 
