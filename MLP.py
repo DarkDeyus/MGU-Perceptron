@@ -77,19 +77,18 @@ def print_iter(perceptron: MLP, avg_error: float, epoch: int, iter: int,
 
 def main():
     np.random.seed(5)
-    
+
     s = 50
     m = np.random.randint(0, 2, size=(s, 5))
 
-    lm = np.array([np.linspace(0, 1, s)]).T
-    lmy = np.power(lm, 1)
+    lm = -20*np.array([np.linspace(0, 1, s)]).T
+    lmy = 50*np.power(lm, 2)
     Xdf = pd.DataFrame(lm, columns=["X"])
     Ydf = pd.DataFrame(lmy, columns=["Y"])
-    lm_test = np.array([np.linspace(0, 1, 5*s)]).T
-    lmy_test = np.power(lm_test, 1)
+    lm_test = -20*np.array([np.linspace(0, 1, 5*s)]).T
+    lmy_test = 50*np.power(lm_test, 2)
     Xt_df = pd.DataFrame(lm_test, columns=["X"])
     Yt_df = pd.DataFrame(lmy_test, columns=["Y"])
-
 
     m = np.hstack((lm, lm, lm, lm, lm))
     #m = np.array([np.array([0,0,0,0,0]), np.array([1,1,1,1,1])])
@@ -99,13 +98,13 @@ def main():
     #m2 = np.hstack((m, af.sigmoid_vec(m[:, [0]])))
     df = pd.DataFrame(m2, columns=list("abcdef"))
     batch_size = s
-    epochs = 4000
-    learning_rate = 0.1
-    momentum = 0.000
-    bias = False
+    epochs = 10000
+    learning_rate = 1
+    momentum = 0.05
+    bias = True
     rng = 12369666
     classification = False
-    hidden_layers_sizes = [5]
+    hidden_layers_sizes = [5, 5]
     x_columns = list("a")
     y_columns = ["f"]
     X = pd.DataFrame(df.loc[:, x_columns])

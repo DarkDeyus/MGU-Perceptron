@@ -76,6 +76,41 @@ class FitParams:
         self.bias = bias
         self.activation_function = activation_function
 
+class MinMaxScaler:
+    """Class scaling values to [0,1] using MinMax scaling"""
+    def __init__(self, df: pd.DataFrame):
+        self.shift_factor = df.min()
+        self.scale_factor = df.max() - self.shift_factor
+
+    def scale(self, df: pd.DataFrame) -> pd.DataFrame:
+        return (df - self.shift_factor)/self.scale_factor
+
+    def unscale(self, df: pd.DataFrame) -> pd.DataFrame:
+        return self.scale_factor*df + self.shift_factor
+
+
+class ClassificationPreparer:
+    """Class translating multivariate classification to one variable classification"""
+    def __init__(self, df: pd.DataFrame):
+        self.df = df
+        self.clf_dict = {}
+        self.clf_reverse_dict = {}
+        output_size = len(self.df)
+        for i in range(len(self.df)):
+            self.clf_dict[i] = tuple(self.df.iloc[[i], :].values[0])
+            self.clf_reverse_dict[self.clf_dict[i]] = i
+        self.processed_df = \
+            pd.DataFrame(df.apply(
+            lambda x:
+                np.eye(output_size)[:, self.clf_reverse_dict[tuple(x)]],
+                                axis=1))
+
+    def classification_df(self) -> pd.DataFrame:
+        return self.processed_df
+
+    def classification_translate(self, classes: List[int]) -> pd.DataFrame:
+        return pd.DataFrame(self.df.loc[classes, :]).reset_index()
+
 
 class NeuralNetwork:
     """Class of model of neural network"""
@@ -158,25 +193,20 @@ class NeuralNetwork:
         fit_params.x_column_names = list(Xdf.columns)
         fit_params.y_column_names = list(Ydf.columns)
         self.fit_params = fit_params
-        X = Xdf
+        self.X = Xdf
+        self.Xscaler = MinMaxScaler(Xdf)
+        X = self.Xscaler.scale(Xdf)
         Y_org = Ydf
         input_size = len(fit_params.x_column_names)
         if fit_params.classification:
             self.Y = Y_org.drop_duplicates().reset_index(drop=True)
-            self.clf_dict = {}
-            self.clf_reverse_dict = {}
-            output_size = len(self.Y)
-            for i in range(len(self.Y)):
-                self.clf_dict[i] = tuple(self.Y.iloc[[i], :].values[0])
-                self.clf_reverse_dict[self.clf_dict[i]] = i
-            Y_org = \
-              pd.DataFrame(Y_org.apply(
-                lambda x:
-                  np.eye(output_size)[:, self.clf_reverse_dict[tuple(x)]],
-                                 axis=1))
+            self.classification_preparer = ClassificationPreparer(self.Y)
+            Y_org = self.classification_preparer.classification_df()
         else:
             self.Y = Y_org
-            output_size = len(self.Y.columns)
+            self.Yscaler = MinMaxScaler(self.Y)
+            Y_org = self.Yscaler.scale(self.Y)
+            output_size = len(Y_org.columns)
             Y_org = pd.DataFrame(Y_org.apply(
                 lambda x: 
                     np.array(x),
@@ -211,24 +241,29 @@ class NeuralNetwork:
     def predict(self, df: pd.DataFrame) -> pd.DataFrame:
         if not self.model_created:
             raise RuntimeError("Model was not created")
+        df = self.Xscaler.scale(df)
         results = []
         for i in range(len(df)):
             result = self._predict_single_raw(np.array(df.loc[[i], self.fit_params.x_column_names].values[0]))
             results.append(result)
         if self.fit_params.classification:
             cls_no = np.argmax(results, axis=1)
-            res_df = pd.DataFrame(self.Y.loc[cls_no, :])
+            res_df = self.classification_preparer.classification_translate(cls_no)
             res_df.reset_index(drop=True, inplace=True)
             return res_df
         else:
-            return pd.DataFrame(results, columns=self.Y.columns)
+            res_df = pd.DataFrame(results, columns=self.Y.columns)
+            res_df = self.Yscaler.unscale(res_df)
+            return res_df
 
     def predict_single(self, single_X: np.array) -> np.array:
+        single_X = self.Xscaler.scale(single_X)
         result = self._predict_single_raw(single_X)
         if self.fit_params.classification:
             cls_no = np.argmax(result)
-            return np.array(self.Y[cls_no, :])
+            return np.array(self.classification_preparer.classification_translate(cls_no))
         else:
+            result = self.Yscaler.unscale(result)
             return result
 
     def _predict_single_raw(self, single_X: np.array) -> np.array:
