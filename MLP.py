@@ -62,10 +62,18 @@ def print_iter(perceptron: MLP, avg_error: float, epoch: int, iter: int,
     if epoch % 25 == 0 and iter == 0:
         print("--------------------------------")
         print(f"Epoch {epoch}, iter {iter}: error {avg_error}")
-        #Y_train_predicted = perceptron.net.predict(X_train)
-        #Y_test_predicted = perceptron.net.predict(X_test)
-        #print(Y_train_predicted)
-        #print(Y_test_predicted)
+        Y_train_predicted = perceptron.net.predict(X_train)
+        Y_test_predicted = perceptron.net.predict(X_test)
+        if mlp.classification:
+            acc_t = np.array(Y_train_predicted == Y_train).astype(int)
+            acc = np.array(Y_test_predicted == Y_test).astype(int)
+            acc_t = sum(acc_t)/len(acc_t)
+            acc = sum(acc)/len(acc)
+        else:
+            acc_t = np.sqrt((np.array(Y_train_predicted - Y_train)**2).mean())
+            acc = np.sqrt((np.array(Y_test_predicted - Y_test)**2).mean())
+        print("Train acc", acc_t)
+        print("Test acc", acc)
         #v.show_edges_weight(mlp)
         pass
 #        for (i, l) in enumerate(net.layers):
@@ -81,12 +89,12 @@ def main():
     s = 50
     m = np.random.randint(0, 2, size=(s, 5))
 
-    lm = -20*np.array([np.linspace(0, 1, s)]).T
-    lmy = 50*np.power(lm, 2)
+    lm = np.array([np.linspace(0, 1, s)]).T
+    lmy = np.power(lm, 2) < 0.5
     Xdf = pd.DataFrame(lm, columns=["X"])
     Ydf = pd.DataFrame(lmy, columns=["Y"])
-    lm_test = -20*np.array([np.linspace(0, 1, 5*s)]).T
-    lmy_test = 50*np.power(lm_test, 2)
+    lm_test = np.array([np.linspace(0, 1, 5*s)]).T
+    lmy_test = np.power(lm_test, 2) < 0.5
     Xt_df = pd.DataFrame(lm_test, columns=["X"])
     Yt_df = pd.DataFrame(lmy_test, columns=["Y"])
 
@@ -103,7 +111,7 @@ def main():
     momentum = 0.05
     bias = True
     rng = 12369666
-    classification = False
+    classification = True
     hidden_layers_sizes = [5, 5]
     x_columns = list("a")
     y_columns = ["f"]
@@ -112,7 +120,7 @@ def main():
     activation_function = af.sigmoid_activation_function
 
     def it_cb(perceptron, avg_error, epoch, iter) -> bool:
-        return print_iter(perceptron, avg_error, epoch, iter, X, Y, X, Y)
+        return print_iter(perceptron, avg_error, epoch, iter, Xdf, Ydf, Xt_df, Yt_df)
 
     global mlp
     mlp = MLP(hidden_layers_sizes, activation_function, batch_size, epochs,

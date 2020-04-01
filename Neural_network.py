@@ -92,24 +92,21 @@ class MinMaxScaler:
 class ClassificationPreparer:
     """Class translating multivariate classification to one variable classification"""
     def __init__(self, df: pd.DataFrame):
-        self.df = df
+        self.df = pd.DataFrame(df).drop_duplicates().reset_index(drop=True)
         self.clf_dict = {}
         self.clf_reverse_dict = {}
-        output_size = len(self.df)
+        self.output_size = len(self.df)
         for i in range(len(self.df)):
             self.clf_dict[i] = tuple(self.df.iloc[[i], :].values[0])
             self.clf_reverse_dict[self.clf_dict[i]] = i
-        self.processed_df = \
-            pd.DataFrame(df.apply(
-            lambda x:
-                np.eye(output_size)[:, self.clf_reverse_dict[tuple(x)]],
-                                axis=1))
 
-    def classification_df(self) -> pd.DataFrame:
-        return self.processed_df
+    def classification_translate_to(self, classes: pd.DataFrame) -> pd.DataFrame:
+        return pd.DataFrame(classes.apply(lambda x:
+                            np.eye(self.output_size)[:, self.clf_reverse_dict[tuple(x)]],
+                            axis=1))
 
-    def classification_translate(self, classes: List[int]) -> pd.DataFrame:
-        return pd.DataFrame(self.df.loc[classes, :]).reset_index()
+    def classification_translate_from(self, classes: pd.DataFrame) -> pd.DataFrame:
+        return pd.DataFrame(self.df.loc[classes, :]).reset_index(drop=True)
 
 
 class NeuralNetwork:
@@ -199,9 +196,10 @@ class NeuralNetwork:
         Y_org = Ydf
         input_size = len(fit_params.x_column_names)
         if fit_params.classification:
-            self.Y = Y_org.drop_duplicates().reset_index(drop=True)
-            self.classification_preparer = ClassificationPreparer(self.Y)
-            Y_org = self.classification_preparer.classification_df()
+            self.Y = Y_org
+            self.classification_preparer = ClassificationPreparer(Y_org)
+            Y_org = self.classification_preparer.classification_translate_to(Y_org)
+            output_size = self.classification_preparer.output_size
         else:
             self.Y = Y_org
             self.Yscaler = MinMaxScaler(self.Y)
@@ -248,7 +246,7 @@ class NeuralNetwork:
             results.append(result)
         if self.fit_params.classification:
             cls_no = np.argmax(results, axis=1)
-            res_df = self.classification_preparer.classification_translate(cls_no)
+            res_df = self.classification_preparer.classification_translate_from(cls_no)
             res_df.reset_index(drop=True, inplace=True)
             return res_df
         else:
