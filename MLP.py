@@ -61,19 +61,21 @@ def print_iter(perceptron: MLP, avg_error: float, epoch: int, iter: int,
                X_test: pd.DataFrame, Y_test: pd.DataFrame) -> bool:
     if epoch % 25 == 0 and iter == 0:
         print("--------------------------------")
-        print(f"Epoch {epoch}, iter {iter}: error {avg_error}")
+        print(f"Epoch {epoch}, iter {iter}: mean_squared_network_error {avg_error}")
         Y_train_predicted = perceptron.net.predict(X_train)
         Y_test_predicted = perceptron.net.predict(X_test)
-        if mlp.classification:
+        if perceptron.classification:
             acc_t = np.array(Y_train_predicted == Y_train).astype(int)
             acc = np.array(Y_test_predicted == Y_test).astype(int)
             acc_t = sum(acc_t)/len(acc_t)
             acc = sum(acc)/len(acc)
+            print("Train acc", acc_t)
+            print("Test acc", acc)
         else:
-            acc_t = np.sqrt((np.array(Y_train_predicted - Y_train)**2).mean())
-            acc = np.sqrt((np.array(Y_test_predicted - Y_test)**2).mean())
-        print("Train acc", acc_t)
-        print("Test acc", acc)
+            sigma_t = np.sqrt((np.array(Y_train_predicted - Y_train)**2).mean())
+            sigma = np.sqrt((np.array(Y_test_predicted - Y_test)**2).mean())
+            print("Train standard deviation", sigma_t)
+            print("Test standard deviation", sigma)
         #v.show_edges_weight(mlp)
         pass
 #        for (i, l) in enumerate(net.layers):
@@ -122,7 +124,6 @@ def main():
     def it_cb(perceptron, avg_error, epoch, iter) -> bool:
         return print_iter(perceptron, avg_error, epoch, iter, Xdf, Ydf, Xt_df, Yt_df)
 
-    global mlp
     mlp = MLP(hidden_layers_sizes, activation_function, batch_size, epochs,
               learning_rate, momentum, bias, rng, classification, it_cb)
     #mlp.fit_df(df, x_columns, y_columns)

@@ -8,6 +8,34 @@ import os
 import Visualizer as v
 from MLP import MLP
 
+def print_iter(perceptron: MLP, avg_error: float, epoch: int, iter: int,
+               X_train: pd.DataFrame, Y_train: pd.DataFrame,
+               X_test: pd.DataFrame, Y_test: pd.DataFrame) -> bool:
+    if epoch % 25 == 0 and iter == 0:
+        print("--------------------------------")
+        print(f"Epoch {epoch}, iter {iter}: mean_squared_network_error {avg_error}")
+        Y_train_predicted = perceptron.net.predict(X_train)
+        Y_test_predicted = perceptron.net.predict(X_test)
+        if perceptron.classification:
+            acc_t = np.array(Y_train_predicted == Y_train).astype(int)
+            acc = np.array(Y_test_predicted == Y_test).astype(int)
+            acc_t = sum(acc_t)/len(acc_t)
+            acc = sum(acc)/len(acc)
+            print("Train acc", acc_t)
+            print("Test acc", acc)
+        else:
+            sigma_t = np.sqrt((np.array(Y_train_predicted - Y_train)**2).mean())
+            sigma = np.sqrt((np.array(Y_test_predicted - Y_test)**2).mean())
+            print("Train standard deviation", sigma_t)
+            print("Test standard deviation", sigma)
+        #v.show_edges_weight(mlp)
+        pass
+#        for (i, l) in enumerate(net.layers):
+#            print(f"Layer {i}")
+#            print(l.weights)
+#            print("\n")
+#        print("\n")
+    return True
 
 def error_in_paths(learning_set_path, testing_set_path):
     error = False
@@ -98,8 +126,14 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
 
     print("Creating perceptron...")
 
+    def iter_cb(mlp, avg_error, epoch, iter):
+        return print_iter(mlp, avg_error, epoch, iter,
+                   learning_set, learning_answers,
+                   testing_set, testing_answers)
+
     perceptron = MLP(layers, activation_function, batch_size, epochs,
-                     learning_rate, momentum, bias, rng_seed, classification)
+                     learning_rate, momentum, bias, rng_seed, classification,
+                     iter_cb)
 
     print("Learning in progress...")
     perceptron.fit(learning_set, learning_answers)
@@ -129,8 +163,8 @@ if __name__ == '__main__':
 
     learning_regression = r'.\data.activation.train.500.csv'
     testing_regression = r'.\data.activation.test.500.csv'
-    prepare_and_run_perceptron(learning_classification, testing_classification)
-    #prepare_and_run_perceptron(learning_regression, testing_regression)
+    #prepare_and_run_perceptron(learning_classification, testing_classification)
+    prepare_and_run_perceptron(learning_regression, testing_regression)
     #prepare_and_run_perceptron(learn_reg, test_reg)
     sys.exit(0)
 
