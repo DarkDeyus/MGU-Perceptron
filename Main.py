@@ -7,35 +7,41 @@ import sys
 import os
 import Visualizer as v
 from MLP import MLP
+from typing import Tuple
+from math import ceil
 
-def print_iter(perceptron: MLP, avg_error: float, epoch: int, iter: int,
-               X_train: pd.DataFrame, Y_train: pd.DataFrame,
-               X_test: pd.DataFrame, Y_test: pd.DataFrame) -> bool:
-    if epoch % 25 == 0 and iter == 0:
-        print("--------------------------------")
-        print(f"Epoch {epoch}, iter {iter}: mean_squared_network_error {avg_error}")
-        Y_train_predicted = perceptron.net.predict(X_train)
-        Y_test_predicted = perceptron.net.predict(X_test)
-        if perceptron.classification:
-            acc_t = np.array(Y_train_predicted == Y_train).astype(int)
-            acc = np.array(Y_test_predicted == Y_test).astype(int)
-            acc_t = sum(acc_t)/len(acc_t)
-            acc = sum(acc)/len(acc)
-            print("Train acc", acc_t)
-            print("Test acc", acc)
-        else:
-            sigma_t = np.sqrt((np.array(Y_train_predicted - Y_train)**2).mean())
-            sigma = np.sqrt((np.array(Y_test_predicted - Y_test)**2).mean())
-            print("Train standard deviation", sigma_t)
-            print("Test standard deviation", sigma)
-        #v.show_edges_weight(mlp)
-        pass
-#        for (i, l) in enumerate(net.layers):
-#            print(f"Layer {i}")
-#            print(l.weights)
-#            print("\n")
-#        print("\n")
-    return True
+def print_iter(perceptron: MLP, avg_error: float, epoch: int, iter: int) -> None:
+    print("--------------------------------")
+    print(f"Epoch {epoch}, iter {iter}: mean_squared_network_error {avg_error}")
+    #if perceptron.classification:
+        #acc_t = np.array(Y_train_predicted == Y_train).astype(int)
+        #acc = np.array(Y_test_predicted == Y_test).astype(int)
+        #acc_t = sum(acc_t)/len(acc_t)
+        #acc = sum(acc)/len(acc)
+        #print("Train acc", acc_t)
+        #print("Test acc", acc)
+    #else:
+        #sigma_t = np.sqrt((np.array(Y_train_predicted - Y_train)**2).mean())
+        #sigma = np.sqrt((np.array(Y_test_predicted - Y_test)**2).mean())
+        #print("Train standard deviation", sigma_t)
+        #print("Test standard deviation", sigma)
+    #v.show_edges_weight(mlp)
+    #pass
+#   for (i, l) in enumerate(net.layers):
+#       print(f"Layer {i}")
+#       print(l.weights)
+#       print("\n")
+#       print("\n")
+
+def score_perceptron(perceptron: MLP,
+                     X_train: pd.DataFrame,
+                     Y_train: pd.DataFrame,
+                     X_test: pd.DataFrame,
+                     Y_test: pd.DataFrame) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+    Y_train_scored = perceptron.net.score(X_train, Y_train)
+    Y_test_scored = perceptron.net.score(X_test, Y_test)
+    return (Y_train_scored, Y_test_scored)
+        
 
 def error_in_paths(learning_set_path, testing_set_path):
     error = False
@@ -63,10 +69,10 @@ def get_data_for_learning(learning_set_path, testing_set_path):
 
 def ask_to_see_visualisation(name_of_visualisation: str) -> bool:
 
-    choice = input(f"Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise")
+    choice = input(f"Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise\n")
     while choice.lower() not in {'y', 'n'}:
-        print("Incorrect option. Try again.")
-        choice = input("Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise")
+        print("Incorrect option. Try again.\n")
+        choice = input("Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise\n")
     return choice.lower() == 'y'
 
 #todo -> nie działa, sa zle wyniki
@@ -119,17 +125,41 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
     layers = [int(x.strip()) for x in layers.split(',')]
 
     epochs = int(config['Parameters']['epochs'])
-    batch_size = int(config['Parameters']['batch size'])
+    batch_size = float(config['Parameters']['batch size'])
     learning_rate = float(config['Parameters']['learning rate'])
     momentum = float(config['Parameters']['momentum'])
     rng_seed = int(config['Parameters']['rng seed'])
 
     print("Creating perceptron...")
 
+    mean_squared_errors_test = []
+    mean_squared_errors_train = []
+
+    avg_acc_errors_test = []
+    avg_acc_errors_train = []
+
+    epoch_points_size = 100
+    epoch_separation = epochs//epoch_points_size if epochs >= epoch_points_size else 1
+
+    epoch_measure_points = []
+    iters_in_epoch = ceil(1.0/batch_size)
+
     def iter_cb(mlp, avg_error, epoch, iter):
-        return print_iter(mlp, avg_error, epoch, iter,
-                   learning_set, learning_answers,
-                   testing_set, testing_answers)
+        if (epoch + 1) % epoch_separation == 0 and iter == iters_in_epoch - 1:
+            print_iter(mlp, avg_error, epoch + 1, iter)
+            (train_errors, test_errors) = score_perceptron(mlp,
+                                                           learning_set,
+                                                           learning_answers,
+                                                           testing_set,
+                                                           testing_answers)
+            (mean_squared_error_train, avg_acc_error_train) = train_errors
+            (mean_squared_error_test, avg_acc_error_test) = test_errors
+            mean_squared_errors_train.append(mean_squared_error_train)
+            mean_squared_errors_test.append(mean_squared_error_test)
+            avg_acc_errors_train.append(avg_acc_error_train)
+            avg_acc_errors_test.append(avg_acc_error_test)
+            epoch_measure_points.append(epoch + 1)
+        return True
 
     perceptron = MLP(layers, activation_function, batch_size, epochs,
                      learning_rate, momentum, bias, rng_seed, classification,
@@ -150,7 +180,8 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
         if ask_to_see_visualisation("result of regression"):
             v.visualize_regression(learning_set, learning_answers, testing_set, testing_answers, result)
     if ask_to_see_visualisation("graph of errors over iterations"):
-        v.visualize_errors([], []) #todo, brak funkcji wyciagajacej bledy po kazdej iteracji dla obu zbiorow
+        v.visualize_errors(mean_squared_errors_train, mean_squared_errors_test, epoch_measure_points)
+        v.visualize_errors(avg_acc_errors_train, avg_acc_errors_test, epoch_measure_points)
     if ask_to_see_visualisation("result model with weights"):
         v.show_edges_weight(perceptron)
 
