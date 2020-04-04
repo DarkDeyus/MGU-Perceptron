@@ -194,8 +194,8 @@ if __name__ == '__main__':
 
     learning_regression = r'.\data.activation.train.500.csv'
     testing_regression = r'.\data.activation.test.500.csv'
-    prepare_and_run_perceptron(learning_classification, testing_classification)
-    #prepare_and_run_perceptron(learning_regression, testing_regression)
+    #prepare_and_run_perceptron(learning_classification, testing_classification)
+    prepare_and_run_perceptron(learning_regression, testing_regression)
     #prepare_and_run_perceptron(learn_reg, test_reg)
     sys.exit(0)
 

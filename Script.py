@@ -62,14 +62,14 @@ def run_perceptron(batch_size, bias, epoch, function, layers, learning_rate, mom
 
 
 def run_optimum():
-    path = "data/projekt1/classification"
+    path = "data/projekt1/regression"
     raw_files = os.listdir(path)
     regression = []
     classification = []
     for file in raw_files:
         f1 = path + "/" + file
         f2 = f1.replace("projekt1", "projekt1_test").replace("train", "test")
-        classification.append((f1, f2))
+        regression.append((f1, f2))
     #classification = [(r'.\data.XOR.train.500.csv', r'.\data.XOR.test.500.csv')]
     #regression = [(r'.\data.square.train.100.csv', r'.\data.square.test.100.csv')]
     

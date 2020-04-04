@@ -171,7 +171,7 @@ class NeuralNetwork:
             products.append(product)
             if j + 1 < len(self.layers) and self.layers[j+1].bias:
                 next_input = np.vstack((output,
-                                    np.repeat(1.0, output.shape[1]).reshape(1, output.shape[1])))
+                                        np.ones((1, output.shape[1]))))
             else:
                 next_input = output
             inputs.append(next_input)
@@ -201,7 +201,7 @@ class NeuralNetwork:
         self.X = Xdf.values.T
         self.Xscaler = MinMaxScaler(self.X)
         X = self.Xscaler.scale(self.X)
-        Y = Ydf
+        Y = Ydf.values.T
         input_size = len(fit_params.x_column_names)
         if fit_params.classification:
             self.classification_preparer = ClassificationPreparer(Y)
@@ -211,8 +211,8 @@ class NeuralNetwork:
         else:
             self.Yscaler = MinMaxScaler(Y)
             Y = self.Yscaler.scale(Y)
-            output_size = Y.shape[1]
-        
+            output_size = Y.shape[0]
+
         if len(X.shape) == 1:
             X = X.reshape(X.shape[0], 1)
         if len(Y.shape) == 1:
@@ -257,8 +257,8 @@ class NeuralNetwork:
             res_df.reset_index(drop=True, inplace=True)
             return res_df
         else:
-            res_df = pd.DataFrame(results, columns=self.fit_params.y_column_names)
-            res_df = self.Yscaler.unscale(res_df)
+            res_df = pd.DataFrame(self.Yscaler.unscale(results).T,
+                                  columns=self.fit_params.y_column_names)
             return res_df
 
     #def predict_single(self, single_X: np.array) -> np.array:
@@ -282,7 +282,7 @@ class NeuralNetwork:
     def score(self, X_test: pd.DataFrame, Y_test: pd.DataFrame) -> Tuple[float, float]:
         if not self.model_created:
             raise RuntimeError("Model was not created")
-        X = self.Xscaler.scale(X_test.T)
+        X = self.Xscaler.scale(X_test.values.T)
         input = X
         for l in self.layers:
             (_, input) = l.process_forward(input, l.bias)
@@ -297,11 +297,9 @@ class NeuralNetwork:
             return (mean_squared, accuracy)
         else:
             res_unscaled = self.Yscaler.unscale(results)
-            Y_test_scaled = np.array(self.Yscaler.scale(Y_test))
+            Y_test_scaled = self.Yscaler.scale(Y_test.values)
             Y_test_array = np.array(Y_test)
-            mean_squared = float(np.apply_along_axis(lambda x: np.sum(x**2)/len(x),
-                                               1,
-                                               results - Y_test_scaled).mean())
+            mean_squared = float(((results - Y_test_scaled)**2).mean())
             avg_error = float(np.abs(res_unscaled - Y_test_array).mean())
             return (mean_squared, avg_error)
 
@@ -315,6 +313,6 @@ class NeuralNetwork:
             l.weights.dump(layer_path)
 
     @classmethod
-    def load_from_file(cls, path: str) -> NeuralNetwork:
+    def load_from_files(cls, path: str) -> NeuralNetwork:
         nn = NeuralNetwork()
         return nn
