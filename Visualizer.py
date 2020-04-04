@@ -6,11 +6,11 @@ import networkx as nx
 import MLP
 
 
-def visualize_errors(learning_set_error, testing_set_error):
-    max_length = max(len(learning_set_error), len(testing_set_error))
-    x = np.arange(1, max_length + 1)
-    plt.plot(x, learning_set_error, color='blue', label="Learning set error")
-    plt.plot(x, testing_set_error, color='red', label='Testing set error')
+def visualize_errors(learning_set_error, testing_set_error, epoch_measure_points):
+    #max_length = max(len(learning_set_error), len(testing_set_error))
+    #x = np.arange(1, max_length + 1)
+    plt.plot(epoch_measure_points, learning_set_error, color='blue', label="Learning set error")
+    plt.plot(epoch_measure_points, testing_set_error, color='red', label='Testing set error')
     plt.xlabel('Number of weight changes')
     plt.ylabel('Error value')
     plt.legend()

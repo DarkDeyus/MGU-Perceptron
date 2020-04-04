@@ -79,8 +79,8 @@ class FitParams:
 class MinMaxScaler:
     """Class scaling values to [0,1] using MinMax scaling"""
     def __init__(self, df: pd.DataFrame):
-        self.shift_factor = df.min()
-        self.scale_factor = df.max() - self.shift_factor
+        self.shift_factor = float(df.min())
+        self.scale_factor = float((df.max() - self.shift_factor))
 
     def scale(self, df: pd.DataFrame) -> pd.DataFrame:
         return (df - self.shift_factor)/self.scale_factor
@@ -123,7 +123,8 @@ class NeuralNetwork:
                            fit_params: FitParams) -> List[Tuple[pd.DataFrame, pd.DataFrame]]:
         indices = np.arange(0, X.shape[0])
         np.random.shuffle(indices)
-        split_no = X.shape[0]//fit_params.batch_size + (1 if X.shape[0] % fit_params.batch_size != 0 else 0)
+        single_batch_size = fit_params.batch_size * X.shape[0]
+        split_no = X.shape[0]//single_batch_size + (1 if X.shape[0] % single_batch_size != 0 else 0)
         indices_split = np.array_split(indices, split_no)
         res = []
         for split in indices_split:
@@ -259,7 +260,7 @@ class NeuralNetwork:
         result = self._predict_single_raw(single_X)
         if self.fit_params.classification:
             cls_no = np.argmax(result)
-            return np.array(self.classification_preparer.classification_translate(cls_no))
+            return np.array(self.classification_preparer.classification_translate_to(cls_no))
         else:
             result = self.Yscaler.unscale(result)
             return result
@@ -271,3 +272,32 @@ class NeuralNetwork:
         for l in self.layers:
             (_, input) = l.process_forward(input, self.fit_params.bias)
         return input
+
+    def score(self, X_test: pd.DataFrame, Y_test: pd.DataFrame) -> Tuple[float, float]:
+        if not self.model_created:
+            raise RuntimeError("Model was not created")
+        df = self.Xscaler.scale(X_test)
+        results = []
+        for i in range(len(df)):
+            result = self._predict_single_raw(np.array(df.loc[[i], self.fit_params.x_column_names].values[0]))
+            results.append(result)
+        results = np.array(results)
+        if self.fit_params.classification:
+            cls_no = np.argmax(results, axis=1)
+            Y_test_translated = np.array(self.classification_preparer.classification_translate_to(Y_test))
+            test_cls_no = np.array(np.argmax(Y_test_translated, axis=1))
+            accuracies = (cls_no == test_cls_no).astype(int)
+            accuracy = float(np.sum(accuracies)/len(accuracies))
+            mean_squared = float(np.apply_along_axis(lambda x: x**2/len(x),
+                                               1,
+                                               results - Y_test_translated))
+            return (mean_squared, accuracy)
+        else:
+            res_unscaled = self.Yscaler.unscale(results)
+            Y_test_scaled = np.array(self.Yscaler.scale(Y_test))
+            Y_test_array = np.array(Y_test)
+            mean_squared = float(np.apply_along_axis(lambda x: x**2/len(x),
+                                               1,
+                                               results - Y_test_scaled).mean())
+            avg_error = float(np.abs(res_unscaled - Y_test_array).mean())
+            return (mean_squared, avg_error)
