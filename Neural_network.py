@@ -79,8 +79,8 @@ class FitParams:
 class MinMaxScaler:
     """Class scaling values to [0,1] using MinMax scaling"""
     def __init__(self, df: pd.DataFrame):
-        self.shift_factor = float(df.min())
-        self.scale_factor = float((df.max() - self.shift_factor))
+        self.shift_factor = np.array(df.min())
+        self.scale_factor = np.array(df.max() - self.shift_factor)
 
     def scale(self, df: pd.DataFrame) -> pd.DataFrame:
         return (df - self.shift_factor)/self.scale_factor
@@ -288,15 +288,15 @@ class NeuralNetwork:
             test_cls_no = np.array(np.argmax(Y_test_translated, axis=1))
             accuracies = (cls_no == test_cls_no).astype(int)
             accuracy = float(np.sum(accuracies)/len(accuracies))
-            mean_squared = float(np.apply_along_axis(lambda x: x**2/len(x),
+            mean_squared = float(np.apply_along_axis(lambda x: np.sum(x**2)/len(x),
                                                1,
-                                               results - Y_test_translated))
+                                               results - Y_test_translated).mean())
             return (mean_squared, accuracy)
         else:
             res_unscaled = self.Yscaler.unscale(results)
             Y_test_scaled = np.array(self.Yscaler.scale(Y_test))
             Y_test_array = np.array(Y_test)
-            mean_squared = float(np.apply_along_axis(lambda x: x**2/len(x),
+            mean_squared = float(np.apply_along_axis(lambda x: np.sum(x**2)/len(x),
                                                1,
                                                results - Y_test_scaled).mean())
             avg_error = float(np.abs(res_unscaled - Y_test_array).mean())
