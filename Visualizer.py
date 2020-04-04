@@ -6,7 +6,7 @@ import networkx as nx
 import MLP
 
 
-def visualize_errors(learning_set_error, testing_set_error):
+def visualize_errors(learning_set_error, testing_set_error, save=False, path=""):
     max_length = max(len(learning_set_error), len(testing_set_error))
     x = np.arange(1, max_length + 1)
     plt.plot(x, learning_set_error, color='blue', label="Learning set error")
@@ -14,11 +14,15 @@ def visualize_errors(learning_set_error, testing_set_error):
     plt.xlabel('Number of weight changes')
     plt.ylabel('Error value')
     plt.legend()
-    plt.show()
+    if save:
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
     pass
 
 
-def visualize_regression(x_learning, y_learning, x_testing, y_testing, y_predicted):
+def visualize_regression(x_learning, y_learning, x_testing, y_testing, y_predicted, save=False, path=""):
     # show learning data
     plt.scatter(x_learning, y_learning, color='black', label='Learning set')
     # show testing data
@@ -28,11 +32,15 @@ def visualize_regression(x_learning, y_learning, x_testing, y_testing, y_predict
     plt.xlabel('x')
     plt.ylabel('y')
     plt.legend()
-    plt.show()
+    if save:
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
     pass
 
 
-def visualize_classification(perceptron, x_testing, class_predicted):
+def visualize_classification(perceptron, x_testing, class_predicted, save=False, path=""):
     # only for points
     class_prediction = class_predicted.squeeze()
     x_values = x_testing.iloc[:, 0].to_numpy()
@@ -53,22 +61,30 @@ def visualize_classification(perceptron, x_testing, class_predicted):
     z = z.squeeze().values.reshape(xx.shape)
     plt.contourf(xx, yy, z)  # , alpha=0.4)
     plt.scatter(x_values, y_values, c=class_prediction, edgecolor='black')  # , s=20
-    plt.show()
+    if save:
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
 
 
-def confusion_matrix(class_actual, class_predicted):
+def confusion_matrix(class_actual, class_predicted, save=False, path=""):
     data = {'Actual class': class_actual.squeeze().tolist(), 'Predicted class': class_predicted.squeeze().tolist()}
     df = pd.DataFrame(data)
     matrix = pd.crosstab(df['Actual class'], df['Predicted class'],
                          rownames=['Actual class'], colnames=['Predicted class'])
     cmap = sn.cubehelix_palette(light=1, as_cmap=True)
     sn.heatmap(matrix, annot=True, cmap=cmap, linecolor='black',
-               linewidths=0.5, rasterized=False,fmt='g')
+               linewidths=0.5, rasterized=False, fmt='g')
     plt.title('Confusion Matrix')
-    plt.show()
+    if save:
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
 
 
-def show_edges_weight(perceptron: MLP.MLP):
+def show_edges_weight(perceptron: MLP.MLP, save=False, path=""):
     dense = nx.Graph()
     layers = perceptron.net.layers
     previous_layer = {}
@@ -81,9 +97,9 @@ def show_edges_weight(perceptron: MLP.MLP):
         # that means that bias exists
         if prev_neuron_layer_count != len(previous_layer):
             part = {i + current_row: (layer_number, i) for i in
-                               range(len(previous_layer), prev_neuron_layer_count)}
+                    range(len(previous_layer), prev_neuron_layer_count)}
             previous_layer = {**previous_layer, **part}
-        #merge dictionaries, adding previous layer
+        # merge dictionaries, adding previous layer
         all_neurons = {**all_neurons, **previous_layer}
 
         if current_row == 0:
@@ -94,7 +110,7 @@ def show_edges_weight(perceptron: MLP.MLP):
         current_layer = {i + current_row: (layer_number + 1, i) for i in
                          range(0, curr_neuron_layer_count)}
 
-        #add edges with weights
+        # add edges with weights
         i = 0
         j = 0
         for curr_neuron in current_layer:
@@ -120,6 +136,10 @@ def show_edges_weight(perceptron: MLP.MLP):
     nx.draw_networkx_edge_labels(dense, all_neurons, edge_labels=labels,
                                  alpha=0.9, label_pos=0.78, font_size=7,
                                  bbox=dict(color='white', alpha=0.9, edgecolor=None))
-    axes = plt.axis('off')
+    plt.axis('off')
 
-    plt.show()
+    if save:
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
