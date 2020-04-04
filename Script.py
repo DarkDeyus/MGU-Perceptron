@@ -1,11 +1,67 @@
 import itertools
 import Main as m
-import MLP as mlp
+from MLP import MLP
 import Visualizer as v
 import Activation_functions as af
 import os
-def optimum_run():
+from math import ceil
 
+
+def run_perceptron(batch_size, bias, epoch, function, layers, learning_rate, momentum, list_of_paths_to_data, rng,
+                   suffix, classification):
+    (learning_set, learning_answers, testing_set, testing_answers) = m.get_data_for_learning(list_of_paths_to_data[0],
+                                                                                             list_of_paths_to_data[1])
+    mean_squared_errors_test = []
+    mean_squared_errors_train = []
+    avg_acc_errors_test = []
+    avg_acc_errors_train = []
+    epoch_points_size = 100
+    epoch_separation = epoch // epoch_points_size if epoch >= epoch_points_size else 1
+    epoch_measure_points = []
+    iters_in_epoch = ceil(1.0 / batch_size)
+
+    def iter_cb(mlp, avg_error, epoch, iter):
+        if (epoch + 1) % epoch_separation == 0 and iter == iters_in_epoch - 1:
+            m.print_iter(mlp, avg_error, epoch + 1, iter)
+            (train_errors, test_errors) = m.score_perceptron(mlp,
+                                                             learning_set,
+                                                             learning_answers,
+                                                             testing_set,
+                                                             testing_answers)
+            (mean_squared_error_train, avg_acc_error_train) = train_errors
+            (mean_squared_error_test, avg_acc_error_test) = test_errors
+            mean_squared_errors_train.append(mean_squared_error_train)
+            mean_squared_errors_test.append(mean_squared_error_test)
+            avg_acc_errors_train.append(avg_acc_error_train)
+            avg_acc_errors_test.append(avg_acc_error_test)
+            epoch_measure_points.append(epoch + 1)
+        return True
+
+    perceptron = MLP(layers, function, batch_size, epoch, learning_rate,
+                     momentum, bias, rng, classification, iter_cb)
+    perceptron.fit(learning_set, learning_answers)
+    result = perceptron.predict(testing_set)
+    base_path = os.path.basename(list_of_paths_to_data[0])[:-4]
+
+    if classification:
+        v.visualize_classification(perceptron, testing_set, result, True,
+                                   f"{base_path}_{suffix}_classification.png")
+        v.confusion_matrix(testing_answers, result, True,
+                           f"{base_path}_{suffix}_confusion_matrix.png")
+        v.visualize_accuracy(avg_acc_errors_train, avg_acc_errors_test, epoch_measure_points, True,
+                             f"{base_path}_{suffix}_accuracy.png")
+    else:
+        v.visualize_regression(learning_set, learning_answers, testing_set, testing_answers,
+                               result, True, f"{base_path}_{suffix}_regression.png")
+        v.visualize_avg_errors(avg_acc_errors_train, avg_acc_errors_test, epoch_measure_points, True,
+                               f"{base_path}_{suffix}_avg_errors.png")
+
+    v.visualize_mean_sqrt_errors(mean_squared_errors_train, mean_squared_errors_test, epoch_measure_points,
+                       True, f"{base_path}_{suffix}_mean_square_errors.png")
+    v.show_edges_weight(perceptron, True, f"{base_path}_{suffix}_weights.png")
+
+
+def run_optimum():
     classification = [(r'.\data.XOR.train.500.csv', r'.\data.XOR.test.500.csv')]
     regression = [(r'.\data.square.train.100.csv', r'.\data.square.test.100.csv')]
     learning_rate = 0.25
@@ -14,57 +70,16 @@ def optimum_run():
     batch_size = 0.25
     layers = [5, 5, 5]
     rng = 1337
-    epoch = 100
+    epoch = 10
     function = af.ActivationFunction(af.sigmoid, af.sigmoid_derivative)
 
+    for example in regression:
+        run_perceptron(batch_size, bias, epoch, function, layers, learning_rate, momentum, example, rng,
+                       "optimum", False)
 
-
-    for regression_ex in regression:
-        (learning_set, learning_answers, testing_set, testing_answers) = m.get_data_for_learning(regression_ex[0], regression_ex[1])
-
-        def iter_cb(mlp, avg_error, epoch, iter):
-            return m.print_iter(mlp, avg_error, epoch, iter,
-                                learning_set, learning_answers,
-                                testing_set, testing_answers)
-
-        perceptron = mlp.MLP(layers, function, batch_size, epoch, learning_rate,
-                             momentum, bias, rng, False, iter_cb)
-
-        perceptron.fit(learning_set, learning_answers)
-        result = perceptron.predict(testing_set)
-        base_path = os.path.basename(regression_ex[0])[:-4]
-        suffix = "optimum"
-        v.visualize_regression(learning_set, learning_answers, testing_set, testing_answers,
-                               result, True, f"{base_path}_{suffix}_regression.png")
-        v.visualize_errors([], [], True, f"{base_path}_{suffix}_errors.png")
-        v.show_edges_weight(perceptron, True, f"{base_path}_{suffix}_weights.png")
-
-
-    for classification_ex in classification:
-        (learning_set, learning_answers, testing_set, testing_answers) = m.get_data_for_learning(classification_ex[0],
-                                                                                                 classification_ex[1])
-
-        def iter_cb(mlp, avg_error, epoch, iter):
-            return m.print_iter(mlp, avg_error, epoch, iter,
-                                learning_set, learning_answers,
-                                testing_set, testing_answers)
-
-        perceptron = mlp.MLP(layers, function, batch_size, epoch, learning_rate,
-                             momentum, bias, rng, True, iter_cb)
-
-        perceptron.fit(learning_set, learning_answers)
-        result = perceptron.predict(testing_set)
-        base_path = os.path.basename(classification_ex[0])[:-4]
-        suffix = "optimum"
-        v.visualize_classification(perceptron, testing_set, result, True,
-                              f"{base_path}_{suffix}_classification.png")
-        v.confusion_matrix(testing_answers, result, True,
-                               f"{base_path}_{suffix}_confusion_matrix.png")
-        v.visualize_errors([], [], True, f"{base_path}_{suffix}_errors.png")
-        v.show_edges_weight(perceptron, True, f"{base_path}_{suffix}_weights.png")
-
-
-
+    for example in classification:
+        run_perceptron(batch_size, bias, epoch, function, layers, learning_rate, momentum, example, rng,
+                       "optimum", True)
 
 
 def run_perceptrons():
@@ -81,72 +96,23 @@ def run_perceptrons():
     rngs = [123, 1337]
     epoch = 10000
 
-
-
-    for regression_ex in regression:
+    for example in regression:
         for parameters in itertools.product(learning_rates, momentums, biases, batch_sizes, layers, functions, rngs):
-
-            (learning_set, learning_answers, testing_set, testing_answers) = m.get_data_for_learning(regression_ex[0],
-                                                                                                     regression_ex[1])
-
-            def iter_cb(mlp, avg_error, epoch, iter):
-                return m.print_iter(mlp, avg_error, epoch, iter,
-                                    learning_set, learning_answers,
-                                    testing_set, testing_answers)
-            rate = parameters[0]
-            momentum = parameters[1]
-            bias = parameters[2]
-            batch = parameters[3]
-            layer = parameters[4]
-            function = parameters[5]
-            rng = parameters[6]
-
-            base_path = os.path.basename(regression_ex[0])[:-4]
-            suffix = f"rate={rate}_momentum={momentum}_bias={bias}_batch={batch}_layer={layer}_" \
+            (rate, momentum, bias, batch_size, layer, function, rng) = parameters
+            suffix = f"rate={rate}_momentum={momentum}_bias={bias}_batch={batch_size}_layer={layer}_" \
                      f"function={function_description[function]}_rng={rng}"
 
-            perceptron = mlp.MLP(layer, function, batch, epoch, rate,
-                                 momentum, bias, rng, False, iter_cb)
+            run_perceptron(batch_size, bias, epoch, function, layer, rate, momentum, example, rng, suffix, False)
 
-            perceptron.fit(learning_set, learning_answers)
-            result = perceptron.predict(testing_set)
-
-            v.visualize_regression(learning_set, learning_answers, testing_set, testing_answers,
-                                   result, True, f"{base_path}_{suffix}_regression.png")
-            v.visualize_errors([], [], True, f"{base_path}_{suffix}_errors.png")
-            v.show_edges_weight(perceptron, True, f"{base_path}_{suffix}_weights.png")
-
-    for classification_ex in classification:
+    for example in classification:
         for parameters in itertools.product(learning_rates, momentums, biases, batch_sizes, layers, functions, rngs):
-            (learning_set, learning_answers, testing_set, testing_answers) = m.get_data_for_learning(classification_ex[0],
-                                                                                                     classification_ex[1])
-
-            def iter_cb(mlp, avg_error, epoch, iter):
-                return m.print_iter(mlp, avg_error, epoch, iter,
-                                    learning_set, learning_answers,
-                                    testing_set, testing_answers)
-            rate = parameters[0]
-            momentum = parameters[1]
-            bias = parameters[2]
-            batch = parameters[3]
-            layer = parameters[4]
-            function = parameters[5]
-            rng = parameters[6]
-
-            perceptron = mlp.MLP(layer, function, batch, epoch, rate, momentum, bias, rng, True, iter_cb)
-
-            perceptron.fit(learning_set, learning_answers)
-            result = perceptron.predict(testing_set)
-            base_path = os.path.basename(classification_ex[0])[:-4]
-            suffix = f"rate={rate}_momentum={momentum}_bias={bias}_batch={batch}_layer={layer}_" \
+            (rate, momentum, bias, batch_size, layer, function, rng) = parameters
+            suffix = f"rate={rate}_momentum={momentum}_bias={bias}_batch={batch_size}_layer={layer}_" \
                      f"function={function_description[function]}_rng={rng}"
-            v.visualize_classification(perceptron, testing_set, result, True,
-                                       f"{base_path}_{suffix}_classification.png")
-            v.confusion_matrix(testing_answers, result, True,
-                               f"{base_path}_{suffix}_confusion_matrix.png")
-            v.visualize_errors([], [], True, f"{base_path}_{suffix}_errors.png")
-            v.show_edges_weight(perceptron, True, f"{base_path}_{suffix}_weights.png")
+
+            run_perceptron(batch_size, bias, epoch, function, layer, rate, momentum, example, rng, suffix, True)
 
 
 if __name__ == "__main__":
-    run_perceptrons()
+    #run_perceptrons()
+    run_optimum()

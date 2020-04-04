@@ -6,13 +6,39 @@ import networkx as nx
 import MLP
 
 
-def visualize_errors(learning_set_error, testing_set_error, epoch_measure_points, save=False, path=""):
-    # max_length = max(len(learning_set_error), len(testing_set_error))
-    # x = np.arange(1, max_length + 1)
-    plt.plot(epoch_measure_points, learning_set_error, color='blue', label="Learning set error")
-    plt.plot(epoch_measure_points, testing_set_error, color='red', label='Testing set error')
+def visualize_mean_sqrt_errors(learning_set_error, testing_set_error, epoch_measure_points, save=False, path=""):
+    plt.plot(epoch_measure_points, learning_set_error, color='blue', label="Learning set")
+    plt.plot(epoch_measure_points, testing_set_error, color='red', label='Testing set')
     plt.xlabel('Number of weight changes')
-    plt.ylabel('Error value')
+    plt.ylabel('Mean square error')
+    plt.legend()
+    if save:
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+    pass
+
+
+def visualize_avg_errors(learning_set_error, testing_set_error, epoch_measure_points, save=False, path=""):
+    plt.plot(epoch_measure_points, learning_set_error, color='blue', label="Learning set")
+    plt.plot(epoch_measure_points, testing_set_error, color='red', label='Testing set')
+    plt.xlabel('Number of weight changes')
+    plt.ylabel('Average error value')
+    plt.legend()
+    if save:
+        plt.savefig(path, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+    pass
+
+
+def visualize_accuracy(learning_set_error, testing_set_error, epoch_measure_points, save=False, path=""):
+    plt.plot(epoch_measure_points, learning_set_error, color='blue', label="Learning set")
+    plt.plot(epoch_measure_points, testing_set_error, color='red', label='Testing set')
+    plt.xlabel('Number of weight changes')
+    plt.ylabel('Accuracy')
     plt.legend()
     if save:
         plt.savefig(path, bbox_inches='tight')

@@ -72,7 +72,7 @@ def ask_to_see_visualisation(name_of_visualisation: str) -> bool:
     choice = input(f"Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise\n")
     while choice.lower() not in {'y', 'n'}:
         print("Incorrect option. Try again.\n")
-        choice = input("Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise\n")
+        choice = input(f"Write 'y' or 'Y' if you want to see {name_of_visualisation}, 'n' or 'N' otherwise\n")
     return choice.lower() == 'y'
 
 #todo -> nie działa, sa zle wyniki
@@ -176,12 +176,16 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
             v.confusion_matrix(testing_answers, result)
         if ask_to_see_visualisation("result of classification"):
             v.visualize_classification(perceptron, testing_set, result)
+        if ask_to_see_visualisation("accuracy plot"):
+            v.visualize_accuracy(avg_acc_errors_train, avg_acc_errors_test, epoch_measure_points)
     else:
         if ask_to_see_visualisation("result of regression"):
             v.visualize_regression(learning_set, learning_answers, testing_set, testing_answers, result)
-    if ask_to_see_visualisation("graph of errors over iterations"):
-        v.visualize_errors(mean_squared_errors_train, mean_squared_errors_test, epoch_measure_points)
-        v.visualize_errors(avg_acc_errors_train, avg_acc_errors_test, epoch_measure_points)
+        if ask_to_see_visualisation("average error values plot"):
+            v.visualize_avg_errors(avg_acc_errors_train, avg_acc_errors_test, epoch_measure_points)
+
+    if ask_to_see_visualisation("mean square errors plot"):
+        v.visualize_mean_sqrt_errors(mean_squared_errors_train, mean_squared_errors_test, epoch_measure_points)
     if ask_to_see_visualisation("result model with weights"):
         v.show_edges_weight(perceptron)
 
