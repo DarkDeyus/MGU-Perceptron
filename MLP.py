@@ -39,7 +39,7 @@ class MLP:
         self.fit_params = None
         self.sizes = hidden_layer_sizes
         self.iter_callback = lambda net, avg_error, epoch, iter: iter_callback(self, avg_error, epoch, iter)
-        self.net = nn.NeuralNetwork(af.mean_squared_error_function, hidden_layer_sizes)
+        self.net = nn.NeuralNetwork("mean_squared", hidden_layer_sizes)
 
     def fit_df(self, train_data: pd.DataFrame, x_columns: List[str], y_columns: List[str]) -> None:
         self.fit_params = nn.FitParams(self.earning_rate, self.batch_size, self.epochs,
