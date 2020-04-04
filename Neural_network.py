@@ -50,7 +50,7 @@ class NeuralNetworkLayer:
         return delta
 
     def calc_change(self, input: np.array, deltas: np.array) -> np.matrix:
-        change = np.matmul(deltas.T[:,:,np.newaxis], input.T[:,np.newaxis,:]).sum(0)
+        change = np.matmul(deltas.T[:,:,np.newaxis], input.T[:,np.newaxis,:]).mean(0)
         return change
 
     def update(self, change: np.matrix, prev_change: np.matrix,
@@ -131,7 +131,7 @@ class NeuralNetwork:
         self.fit_params = None
 
     def _split_train_data(self, X: np.matrix, Y: np.matrix,
-                           fit_params: FitParams) -> List[Tuple[np.matrix, np.matrix]]:
+                          fit_params: FitParams) -> List[Tuple[np.matrix, np.matrix]]:
         indices = np.arange(0, X.shape[1])
         np.random.shuffle(indices)
         single_batch_size = fit_params.batch_size * X.shape[1]
@@ -157,41 +157,8 @@ class NeuralNetwork:
     def _iterate_fit(self, X: np.matrix, Y: np.matrix,
                      fit_params: FitParams) -> Tuple[List[np.matrix], float]:
         changes = []
-        total_error = 0.0
         for layer in self.layers:
             changes.append(np.zeros_like(layer.weights))
-        # for i in range(len(X)):
-        #     expected_output = np.array(Y[i, :].values[0])
-        #     first_input = np.array(X.iloc[i, :])
-        #     if self.layers[0].bias:
-        #         first_input = np.append(first_input, 1.0)
-        #     inputs = [first_input]
-        #     products = []
-        #     for j in range(len(self.layers)):
-        #         layer = self.layers[j]
-        #         (product, output) = layer.process_forward(inputs[-1], False)
-        #         products.append(product)
-        #         if j + 1 < len(self.layers) and self.layers[j+1].bias:
-        #             next_input = np.append(output, 1.0)
-        #         else:
-        #             next_input = output
-        #         inputs.append(next_input)
-        #     error = self.error.function(inputs[-1], expected_output)
-        #     total_error += error
-        #     error_grad = self.error.gradient(inputs[-1], expected_output)
-        #     local_deltas = [None] * len(self.layers)
-        #     for k in reversed(range(len(self.layers))):
-        #         layer = self.layers[k]
-        #         product = products[k]
-        #         input = inputs[k]
-        #         if k == len(self.layers) - 1:
-        #             delta = layer.process_backwards_last(product, error_grad)
-        #         else:
-        #             next_layer = self.layers[k+1]
-        #             no_bias_weights = next_layer.weights[:, :-1] if next_layer.bias else next_layer.weights
-        #             delta = layer.process_backwards(product, delta, no_bias_weights)
-        #         local_deltas[k] = delta
-        #         changes[k] += layer.calc_change(input, delta)
         first_input = X
         if self.layers[0].bias:
             first_input = np.vstack((first_input,
@@ -208,8 +175,7 @@ class NeuralNetwork:
             else:
                 next_input = output
             inputs.append(next_input)
-        error = self.error.function(inputs[-1], Y)
-        total_error += error
+        avg_error = self.error.function(inputs[-1], Y)
         error_grad = self.error.gradient(inputs[-1], Y)
         local_deltas = [None] * len(self.layers)
         for k in reversed(range(len(self.layers))):
@@ -222,11 +188,8 @@ class NeuralNetwork:
                 next_layer = self.layers[k+1]
                 no_bias_weights = next_layer.weights[:, :-1] if next_layer.bias else next_layer.weights
                 delta = layer.process_backwards(product, delta, no_bias_weights)
-                local_deltas[k] = delta
-                changes[k] += layer.calc_change(input, delta)
-        avg_error = total_error/len(X)
-        for i_change in range(len(changes)):
-            changes[i_change] = changes[i_change]/len(X)
+            local_deltas[k] = delta
+            changes[k] = layer.calc_change(input, delta)
         return (changes, avg_error)
 
     def fit(self, Xdf: pd.DataFrame, Ydf: pd.DataFrame, fit_params: FitParams) -> None:
@@ -289,7 +252,7 @@ class NeuralNetwork:
             (_, input) = l.process_forward(input, l.bias)
         results = input
         if self.fit_params.classification:
-            cls_no = np.argmax(results, axis=1)
+            cls_no = self.classification_preparer.one_hot_decode(results)
             res_df = self.classification_preparer.classification_translate_from(cls_no)
             res_df.reset_index(drop=True, inplace=True)
             return res_df

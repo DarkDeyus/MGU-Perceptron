@@ -62,15 +62,24 @@ def run_perceptron(batch_size, bias, epoch, function, layers, learning_rate, mom
 
 
 def run_optimum():
-    classification = [(r'.\data.XOR.train.500.csv', r'.\data.XOR.test.500.csv')]
-    regression = [(r'.\data.square.train.100.csv', r'.\data.square.test.100.csv')]
+    path = "data/projekt1/classification"
+    raw_files = os.listdir(path)
+    regression = []
+    classification = []
+    for file in raw_files:
+        f1 = path + "/" + file
+        f2 = f1.replace("projekt1", "projekt1_test").replace("train", "test")
+        classification.append((f1, f2))
+    #classification = [(r'.\data.XOR.train.500.csv', r'.\data.XOR.test.500.csv')]
+    #regression = [(r'.\data.square.train.100.csv', r'.\data.square.test.100.csv')]
+    
     learning_rate = 0.25
     momentum = 0.1
     bias = True
     batch_size = 0.25
     layers = [5, 5, 5]
     rng = 1337
-    epoch = 10
+    epoch = 100000
     function = af.ActivationFunction(af.sigmoid, af.sigmoid_derivative)
 
     for example in regression:
