@@ -100,11 +100,7 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
 
     true_false_converter = {'yes': True, 'no': False}
 
-    functions = {'sigmoid': af.ActivationFunction(af.sigmoid, af.sigmoid_derivative),
-                 'tanh': af.ActivationFunction(af.tanh, af.tanh_derivative),
-                 'reLU': af.ActivationFunction(af.reLU, af.reLU_derivative),
-                 'identity': af.ActivationFunction(af.identity, af.identity_derivative),
-                 'leakyReLU': af.ActivationFunction(af.leakyReLU, af.leakyReLU_derivative)}
+    functions = af.activation_functions_dict
 
     classification = true_false_converter.get(config['Parameters']['classification'], None)
     if classification is None:

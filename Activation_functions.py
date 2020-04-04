@@ -79,5 +79,18 @@ mean_squared_error_function = ErrorFunction(mean_squared_error, mean_squared_err
 
 sigmoid_activation_function = ActivationFunction(sigmoid, sigmoid_derivative)
 tanh_activation_function = ActivationFunction(tanh, tanh_derivative)
+ReLU_activation_function = ActivationFunction(reLU, reLU_derivative)
 identity_activation_function = ActivationFunction(identity, identity_derivative)
 leakyReLU_activation_function = ActivationFunction(leakyReLU, leakyReLU_derivative)
+
+error_functions_dict = {
+    "mean_squared": mean_squared_error_function
+}
+
+activation_functions_dict = {
+    "sigmoid": sigmoid_activation_function,
+    "tanh": tanh_activation_function,
+    "relu": ReLU_activation_function,
+    "identity": identity_activation_function,
+    "leakyrelu": leakyReLU_activation_function
+}
