@@ -60,6 +60,19 @@ def run_perceptron(batch_size, bias, epoch, function, layers, learning_rate, mom
                        True, f"{base_path}_{suffix}_mean_square_errors.png")
     v.show_edges_weight(perceptron, True, f"{base_path}_{suffix}_weights.png")
 
+    with open(f"{base_path}_{suffix}_results.txt", 'w') as file:
+        file.write("mean_squared_errors_test: ")
+        file.writelines(f"{error} " for error in mean_squared_errors_test)
+        file.write('\n')
+        file.write("mean_squared_errors_train: ")
+        file.writelines(f"{error} " for error in mean_squared_errors_train)
+        file.write('\n')
+        file.write("avg_acc_errors_test: ")
+        file.writelines(f"{error} " for error in avg_acc_errors_test)
+        file.write('\n')
+        file.write("avg_acc_errors_train: ")
+        file.writelines(f"{error} " for error in avg_acc_errors_train)
+
 
 def run_optimum():
     path = "data/projekt1/regression"
