@@ -154,6 +154,7 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
             avg_acc_errors_train.append(avg_acc_error_train)
             avg_acc_errors_test.append(avg_acc_error_test)
             epoch_measure_points.append(epoch + 1)
+            print("MSE:", mean_squared_error_test)
         return True
 
     perceptron = MLP(layers, activation_function, batch_size, epochs,

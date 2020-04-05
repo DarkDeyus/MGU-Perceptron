@@ -91,8 +91,8 @@ class FitParams:
 class MinMaxScaler:
     """Class scaling values to [0,1] using MinMax scaling"""
     def __init__(self, vals: np.matrix):
-        self.shift_factor = vals.min(1)
-        self.scale_factor = vals.max(1) - self.shift_factor
+        self.shift_factor = np.array(vals.min(1))
+        self.scale_factor = np.array(vals.max(1) - self.shift_factor)
         self.shift_factor = self.shift_factor.reshape(self.shift_factor.shape[0], 1)
         self.scale_factor = self.scale_factor.reshape(self.scale_factor.shape[0], 1)
 
@@ -212,7 +212,7 @@ class NeuralNetwork:
         if not self.layers_prepared:
             self.Xscaler = MinMaxScaler(self.X)
         X = self.Xscaler.scale(self.X)
-        Y = Ydf.values.T
+        Y = Ydf
         input_size = len(fit_params.x_column_names)
         if fit_params.classification:
             if not self.layers_prepared:
@@ -221,6 +221,7 @@ class NeuralNetwork:
             Y = self.classification_preparer.one_hot_encode(Y)
             output_size = self.classification_preparer.output_size
         else:
+            Y = Y.values.T
             if not self.layers_prepared:
                 self.Yscaler = MinMaxScaler(Y)
             Y = self.Yscaler.scale(Y)
@@ -310,8 +311,8 @@ class NeuralNetwork:
             return (mean_squared, accuracy)
         else:
             res_unscaled = self.Yscaler.unscale(results)
-            Y_test_scaled = self.Yscaler.scale(Y_test.values)
-            Y_test_array = np.array(Y_test)
+            Y_test_array = Y_test.values.T
+            Y_test_scaled = self.Yscaler.scale(Y_test_array)
             mean_squared = float(((results - Y_test_scaled)**2).mean())
             avg_error = float(np.abs(res_unscaled - Y_test_array).mean())
             return (mean_squared, avg_error)

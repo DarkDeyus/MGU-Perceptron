@@ -87,10 +87,6 @@ def run_optimum():
         f1 = reg_path + "/" + file
         f2 = f1.replace("projekt1", "projekt1_test").replace("train", "test")
         regression.append((f1, f2))
-    for file in cls_raw_files:
-        f1 = cls_path + "/" + file
-        f2 = f1.replace("projekt1", "projekt1_test").replace("train", "test")
-        classification.append((f1, f2))
     #classification = [(r'.\data.XOR.train.500.csv', r'.\data.XOR.test.500.csv')]
     #regression = [(r'.\data.square.train.100.csv', r'.\data.square.test.100.csv')]
 
