@@ -4,8 +4,16 @@ import pandas as pd
 import Activation_functions as af
 from typing import Tuple, List, Callable
 import os
-import json
+import jsonpickle
 
+
+def to_json_file(obj: object, path: str) -> None:
+    with open(path, 'w') as f:
+        f.write(jsonpickle.dumps(obj))
+
+def from_json_file(path: str) -> obj:
+    with open(path, 'r') as f:
+        return jsonpickle.loads(f.read())
 class NeuralNetworkLayer:
     """Class representing single layer of neural network"""
     def __init__(self, weight_matrix: np.matrix,
@@ -66,7 +74,7 @@ class FitParams:
     """Class configuring fitting options"""
     def __init__(self, learning_rate: float, batch_size: int, epochs: int, classification: bool,
                  momentum: float, x_column_names: List[str], y_column_names: List[str], bias: bool,
-                 activation_function: af.ActivationFunction,
+                 activation_function_name: str,
                  iter_callback: Callable[[NeuralNetwork, float, int], bool] = None):
         self.learning_rate = learning_rate
         self.batch_size = batch_size
@@ -77,7 +85,8 @@ class FitParams:
         self.classification = classification
         self.iter_callback = iter_callback
         self.bias = bias
-        self.activation_function = activation_function
+        self.activation_function_name = activation_function_name
+        self.activation_function = af.activation_functions_dict[activation_function_name]
 
 class MinMaxScaler:
     """Class scaling values to [0,1] using MinMax scaling"""
@@ -129,6 +138,7 @@ class NeuralNetwork:
         self.hidden_layers_sizes = hidden_layers_sizes
         self.model_created = False
         self.fit_params = None
+        self.layers_prepared = False
 
     def _split_train_data(self, X: np.matrix, Y: np.matrix,
                           fit_params: FitParams) -> List[Tuple[np.matrix, np.matrix]]:
@@ -144,15 +154,17 @@ class NeuralNetwork:
 
     def _prepare_layers(self, hidden_layers_sizes: List[int], input_size: int,
                         output_size: int, fit_params: FitParams) -> None:
+        if self.layers_prepared:
+            return
         self.layers = []
         sizes = [input_size] + hidden_layers_sizes + [output_size]
-        self.layers_sizes = sizes
         for i in range(len(hidden_layers_sizes)):
             self.layers.append(NeuralNetworkLayer.create_random(
               sizes[i], sizes[i+1], fit_params.bias, fit_params.bias, fit_params.activation_function))
         self.layers.append(NeuralNetworkLayer.create_random(
           sizes[-2], sizes[-1], fit_params.bias, fit_params.bias,
-          fit_params.activation_function if fit_params.classification else af.sigmoid_activation_function))
+          fit_params.activation_function))
+        self.layers_prepared = True
 
     def _iterate_fit(self, X: np.matrix, Y: np.matrix,
                      fit_params: FitParams) -> Tuple[List[np.matrix], float]:
@@ -193,23 +205,24 @@ class NeuralNetwork:
         return (changes, avg_error)
 
     def fit(self, Xdf: pd.DataFrame, Ydf: pd.DataFrame, fit_params: FitParams) -> None:
-        if self.model_created:
-            raise RuntimeError("Model was already trained")
         fit_params.x_column_names = list(Xdf.columns)
         fit_params.y_column_names = list(Ydf.columns)
         self.fit_params = fit_params
         self.X = Xdf.values.T
-        self.Xscaler = MinMaxScaler(self.X)
+        if not self.layers_prepared:
+            self.Xscaler = MinMaxScaler(self.X)
         X = self.Xscaler.scale(self.X)
         Y = Ydf.values.T
         input_size = len(fit_params.x_column_names)
         if fit_params.classification:
-            self.classification_preparer = ClassificationPreparer(Y)
+            if not self.layers_prepared:
+                self.classification_preparer = ClassificationPreparer(Y)
             Y = self.classification_preparer.classification_translate_to(Y)
             Y = self.classification_preparer.one_hot_encode(Y)
             output_size = self.classification_preparer.output_size
         else:
-            self.Yscaler = MinMaxScaler(Y)
+            if not self.layers_prepared:
+                self.Yscaler = MinMaxScaler(Y)
             Y = self.Yscaler.scale(Y)
             output_size = Y.shape[0]
 
@@ -304,15 +317,56 @@ class NeuralNetwork:
             return (mean_squared, avg_error)
 
     def save_to_files(self, path: str) -> None:
-        os.mkdir(path)
+        if not self.model_created:
+            raise ValueError("Model not created")
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            pass
         params_path = os.path.join(path, "params")
-        with open(params_path, 'w') as f:
-            json.dumps(self.fit_params, f)
+        to_json_file(self.fit_params, params_path)
+        Xscaler_path = os.path.join(path, "Xscaler")
+        to_json_file(self.Xscaler, Xscaler_path)
+        hidden_layers_sizes_path = os.path.join(path, "hidden_layers_sizes")
+        to_json_file(self.hidden_layers_sizes, hidden_layers_sizes_path)
+        if self.fit_params.classification:
+            preparer_path = os.path.join(path, "peparer")
+            to_json_file(self.classification_preparer, preparer_path)
+        else:
+            Yscaler_path = os.path.join(path, "Yscaler")
+            to_json_file(self.Yscaler, Yscaler_path)
         for (i, l) in enumerate(self.layers):
             layer_path = os.path.join(path, f"layer{i}")
-            l.weights.dump(layer_path)
+            np.save(layer_path, l.weights)
 
     @classmethod
     def load_from_files(cls, path: str) -> NeuralNetwork:
-        nn = NeuralNetwork()
+        nn = NeuralNetwork("mean_squared", [])
+        params_path = os.path.join(path, "params")
+        nn.fit_params = from_json_file(params_path)
+        nn.fit_params.activation_function = af.activation_functions_dict[nn.fit_params.activation_function_name]
+        Xscaler_path = os.path.join(path, "Xscaler")
+        nn.Xscaler = from_json_file(Xscaler_path)
+        nn.layers = []
+        hidden_layers_sizes_path = os.path.join(path, "hidden_layers_sizes")
+        nn.hidden_layers_sizes = from_json_file(hidden_layers_sizes_path)
+        if nn.fit_params.classification:
+            preparer_path = os.path.join(path, "peparer")
+            nn.classification_preparer = from_json_file(preparer_path)
+        else:
+            Yscaler_path = os.path.join(path, "Yscaler")
+            nn.Yscaler = from_json_file(Yscaler_path)
+        for (i, l_size) in enumerate(nn.hidden_layers_sizes):
+            layer_path = os.path.join(path, f"layer{i}.npy")
+            weights = np.load(layer_path)
+            layer = NeuralNetworkLayer(weights, nn.fit_params.activation_function, nn.fit_params.bias)
+            nn.layers.append(layer)
+        layer_path = os.path.join(path, f"layer{len(nn.hidden_layers_sizes)}.npy")
+        weights = np.load(layer_path)
+        layer = NeuralNetworkLayer(weights,
+                                   nn.fit_params.activation_function,
+                                   nn.fit_params.bias)
+        nn.layers.append(layer)
+        nn.model_created = True
+        nn.layers_prepared = True
         return nn

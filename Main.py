@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import Activation_functions as af
+import Neural_network as nn
 import configparser
 import sys
 import os
@@ -100,14 +101,12 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
 
     true_false_converter = {'yes': True, 'no': False}
 
-    functions = af.activation_functions_dict
-
     classification = true_false_converter.get(config['Parameters']['classification'], None)
     if classification is None:
         raise ValueError("Incorrect classification or regression setting")
         return
 
-    activation_function = functions.get(config['Parameters']['activation function'], None)
+    activation_function = config['Parameters']['activation function']
     if activation_function is None:
         raise ValueError("Incorrect activation function")
         return
@@ -134,7 +133,7 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
     avg_acc_errors_test = []
     avg_acc_errors_train = []
 
-    epoch_points_size = 100
+    epoch_points_size = 10
     epoch_separation = epochs//epoch_points_size if epochs >= epoch_points_size else 1
 
     epoch_measure_points = []
@@ -167,6 +166,11 @@ def prepare_and_run_perceptron(learning_set_path, testing_set_path):
     result = perceptron.predict(testing_set)
     print("Completed!")
     print()
+    oldnet = perceptron.net
+    perceptron.net.save_to_files("save_test")
+    perceptron.net = nn.NeuralNetwork.load_from_files("save_test")
+    perceptron.net.fit_params.iter_callback = iter_cb
+    perceptron.fit(learning_set, learning_answers)
     if classification:
         if ask_to_see_visualisation("confusion matrix"):
             v.confusion_matrix(testing_answers, result)

@@ -80,7 +80,7 @@ def run_optimum():
     layers = [5, 5, 5]
     rng = 1337
     epoch = 100000
-    function = af.ActivationFunction(af.sigmoid, af.sigmoid_derivative)
+    function = "sigmoid"
 
     for example in regression:
         run_perceptron(batch_size, bias, epoch, function, layers, learning_rate, momentum, example, rng,
@@ -99,8 +99,7 @@ def run_perceptrons():
     biases = [True, False]
     batch_sizes = [0.25, 1]
     layers = [[], [1], [5], [3, 3], [5, 5, 5], [4, 4, 4, 4]]
-    functions = [af.ActivationFunction(af.sigmoid, af.sigmoid_derivative),
-                 af.ActivationFunction(af.tanh, af.tanh_derivative)]
+    functions = ["sigmoid", "tanh"]
     function_description = {functions[0]: "Sigmoid", functions[1]: "Tanh"}
     rngs = [123, 1337]
     epoch = 10000
