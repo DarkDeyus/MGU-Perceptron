@@ -1,5 +1,6 @@
 from math import ceil
 import pandas as pd
+import numpy as np
 import Main as m
 from MLP import MLP
 import os
@@ -73,6 +74,11 @@ def run_perceptron(batch_size, bias, epoch, function, layers, learning_rate, mom
         file.write("avg_acc_errors_train: ")
         file.writelines(f"{error} " for error in avg_acc_errors_train)
 
+    # save to csv
+    res = result.rename(columns={result.columns[0]: "Label"})
+    res.insert(loc=0, column='ImageId', value=np.arange(1, len(res) + 1))
+    res.to_csv("./result.csv", index=False)
+
 
 def get_data_for_learning(learning_set_path, testing_set_path, solution_csv):
     learning = pd.read_csv(learning_set_path)
@@ -96,7 +102,7 @@ def run_optimum():
     batch_size = 0.25
     layers = [5, 5, 5]
     rng = 1337
-    epoch = 100000
+    epoch = 10
     function = "sigmoid"
 
     run_perceptron(batch_size, bias, epoch, function, layers, learning_rate, momentum,
