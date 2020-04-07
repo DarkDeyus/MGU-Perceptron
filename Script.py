@@ -92,13 +92,12 @@ def run_optimum():
         f2 = f1.replace("projekt1", "projekt1_test").replace("train", "test")
         classification.append((f1, f2))
 
-
-    learning_rate = 0.1
-    momentum = 0
+    learning_rate = 0.25
+    momentum = 0.1
     bias = True
-    batch_size = 0.1
-    layers = [10]
-    rng = 1
+    batch_size = 0.25
+    layers = [5, 5, 5]
+    rng = 1337
     epoch = 100000
     function = "sigmoid"
 
