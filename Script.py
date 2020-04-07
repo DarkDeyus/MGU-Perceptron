@@ -91,15 +91,14 @@ def run_optimum():
         f1 = cls_path + "/" + file
         f2 = f1.replace("projekt1", "projekt1_test").replace("train", "test")
         classification.append((f1, f2))
-    #classification = [(r'.\data.XOR.train.500.csv', r'.\data.XOR.test.500.csv')]
-    #regression = [(r'.\data.square.train.100.csv', r'.\data.square.test.100.csv')]
 
-    learning_rate = 0.25
-    momentum = 0.1
+
+    learning_rate = 0.1
+    momentum = 0
     bias = True
-    batch_size = 0.25
-    layers = [5, 5, 5]
-    rng = 1337
+    batch_size = 0.1
+    layers = [10]
+    rng = 1
     epoch = 100000
     function = "sigmoid"
 
