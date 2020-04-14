@@ -5,7 +5,8 @@ import Activation_functions as af
 from typing import Tuple, List, Callable
 import os
 import jsonpickle
-
+import jsonpickle.ext.pandas as jsonpickle_pd
+jsonpickle_pd.register_handlers()
 
 def to_json_file(obj: object, path: str) -> None:
     with open(path, 'w') as f:
@@ -35,7 +36,7 @@ class NeuralNetworkLayer:
                       activation_function: af.ActivationFunction) -> NeuralNetworkLayer:
         if add_bias:
             input_n += 1
-        return NeuralNetworkLayer(np.random.rand(output_n, input_n), activation_function, has_bias)
+        return NeuralNetworkLayer((np.random.rand(output_n, input_n)*2 - 1)*0.05, activation_function, has_bias)
 
     def process_forward(self, input: np.matrix, add_bias: bool) -> Tuple[np.matrix, np.matrix]:
         if add_bias:
@@ -91,10 +92,12 @@ class FitParams:
 class MinMaxScaler:
     """Class scaling values to [0,1] using MinMax scaling"""
     def __init__(self, vals: np.matrix):
-        self.shift_factor = np.array(vals.min(1))
-        self.scale_factor = np.array(vals.max(1) - self.shift_factor)
+        self.shift_factor = np.array(vals.min(1)).astype(float)
+        self.scale_factor = np.array(vals.max(1) - self.shift_factor).astype(float)
+        self.scale_factor = self.scale_factor + (self.scale_factor == 0).astype(float)
         self.shift_factor = self.shift_factor.reshape(self.shift_factor.shape[0], 1)
         self.scale_factor = self.scale_factor.reshape(self.scale_factor.shape[0], 1)
+        self.scale_factor = 1.0
 
     def scale(self, vals: np.matrix) -> np.matrix:
         return (vals - self.shift_factor)/self.scale_factor
@@ -128,6 +131,13 @@ class ClassificationPreparer:
     def one_hot_decode(self, ar: np.array) -> np.array:
         return np.argmax(ar, axis=0)
 
+    def save_to(self, filename: str) -> None:
+        self.df.to_csv(filename)
+
+    @classmethod
+    def load_from(self, filename: str) -> ClassificationPreparer:
+        return ClassificationPreparer(pd.read_csv(filename))
+
 class NeuralNetwork:
     """Class of model of neural network"""
     def __init__(self,
@@ -142,6 +152,8 @@ class NeuralNetwork:
 
     def _split_train_data(self, X: np.matrix, Y: np.matrix,
                           fit_params: FitParams) -> List[Tuple[np.matrix, np.matrix]]:
+        if fit_params.batch_size == 1.0:
+            return [(X, Y)]
         indices = np.arange(0, X.shape[1])
         np.random.shuffle(indices)
         single_batch_size = fit_params.batch_size * X.shape[1]
@@ -163,7 +175,7 @@ class NeuralNetwork:
               sizes[i], sizes[i+1], fit_params.bias, fit_params.bias, fit_params.activation_function))
         self.layers.append(NeuralNetworkLayer.create_random(
           sizes[-2], sizes[-1], fit_params.bias, fit_params.bias,
-          fit_params.activation_function))
+          af.identity_activation_function))
         self.layers_prepared = True
 
     def _iterate_fit(self, X: np.matrix, Y: np.matrix,
@@ -331,8 +343,8 @@ class NeuralNetwork:
         hidden_layers_sizes_path = os.path.join(path, "hidden_layers_sizes")
         to_json_file(self.hidden_layers_sizes, hidden_layers_sizes_path)
         if self.fit_params.classification:
-            preparer_path = os.path.join(path, "peparer")
-            to_json_file(self.classification_preparer, preparer_path)
+            preparer_path = os.path.join(path, "preparer")
+            self.classification_preparer.save_to(preparer_path)
         else:
             Yscaler_path = os.path.join(path, "Yscaler")
             to_json_file(self.Yscaler, Yscaler_path)
@@ -352,8 +364,8 @@ class NeuralNetwork:
         hidden_layers_sizes_path = os.path.join(path, "hidden_layers_sizes")
         nn.hidden_layers_sizes = from_json_file(hidden_layers_sizes_path)
         if nn.fit_params.classification:
-            preparer_path = os.path.join(path, "peparer")
-            nn.classification_preparer = from_json_file(preparer_path)
+            preparer_path = os.path.join(path, "preparer")
+            nn.classification_preparer = ClassificationPreparer.load_from(preparer_path)
         else:
             Yscaler_path = os.path.join(path, "Yscaler")
             nn.Yscaler = from_json_file(Yscaler_path)
