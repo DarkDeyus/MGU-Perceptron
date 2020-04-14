@@ -30,6 +30,43 @@ def mean_squared_error_derivative(result: np.array, expected: np.array) -> np.ar
     res = 2*(result - expected)/result.shape[0]
     return res
 
+def softmax(x: np.array) -> np.array:
+    ex = np.exp(x)
+    ex /= ex.sum(0)
+    return ex
+
+def sotfmax_cross_entropy(result: np.array, expected: np.array) -> np.array:
+    softmaxed = softmax(result)
+    logs = np.log(softmaxed)
+    result = -np.multiply(logs, expected).sum(0).mean()
+    return result
+
+def softmax_cross_entropy_derivative(result: np.array, expected: np.array) -> np.array:
+    softmaxed = softmax(result)
+    return softmaxed - expected 
+
+#def mean_squared_softmax_error(result: np.array, expected: np.array) -> float:
+#    return mean_squared_error(softmax(result), expected)
+
+#def mean_squared_softmax_error_derivative(result: np.array, expected: np.array) -> float:
+#    soft_result = softmax(result)
+#    exps = np.exp(result)
+#    sums = exps.sum(0)
+#    n = result.shape[0]
+#    x = (2/n)*np.multiply(result, 1/np.power(sums, 2))
+#    x = np.multiply(x, soft_result - expected)
+#    diff = soft_result - expected
+#    diffT = np.reshape(diff, (diff.shape[0], 1))    
+#    np.matmul( ,diffT)
+
+
+
+def mean_squared_softmax(result: np.array, expected: np.array) -> float:
+    sub = np.subtract(result, expected)
+    squared = np.square(sub)
+    res = squared.mean()
+    return res
+
 
 def sigmoid(x: np.array) -> np.array:
     return 1 / (1 + np.exp(-x))
@@ -70,12 +107,11 @@ def leakyReLU(x: np.array) -> np.array:
 
 
 def leakyReLU_derivative(x: np.array) -> np.array:
-    dx = np.ones_like(x)
-    dx[x < 0] = 0.01
-    return dx
+    return (x > 0).astype(float) * x + (x < 0).astype(float) * 0.01 * x
 
 
 mean_squared_error_function = ErrorFunction(mean_squared_error, mean_squared_error_derivative)
+softmax_cross_entropy_error_function = ErrorFunction(sotfmax_cross_entropy, softmax_cross_entropy_derivative)
 
 sigmoid_activation_function = ActivationFunction(sigmoid, sigmoid_derivative)
 tanh_activation_function = ActivationFunction(tanh, tanh_derivative)
@@ -84,7 +120,8 @@ identity_activation_function = ActivationFunction(identity, identity_derivative)
 leakyReLU_activation_function = ActivationFunction(leakyReLU, leakyReLU_derivative)
 
 error_functions_dict = {
-    "mean_squared": mean_squared_error_function
+    "mean_squared": mean_squared_error_function,
+    "softmax_cross_entropy": softmax_cross_entropy_error_function
 }
 
 activation_functions_dict = {

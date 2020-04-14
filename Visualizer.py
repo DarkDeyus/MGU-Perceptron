@@ -71,8 +71,8 @@ def visualize_classification(perceptron, x_testing, class_predicted, save=False,
     class_prediction = class_predicted.squeeze()
     x_values = x_testing.iloc[:, 0].to_numpy()
     y_values = x_testing.iloc[:, 1].to_numpy()
-    x_min, x_max = np.min(x_values) - 1, np.max(x_values) + 1
-    y_min, y_max = np.min(y_values) - 1, np.max(y_values) + 1
+    x_min, x_max = np.min(x_values) - 0.1, np.max(x_values) + 0.1
+    y_min, y_max = np.min(y_values) - 0.1, np.max(y_values) + 0.1
 
     # get the points
     number_of_points = 100
@@ -112,7 +112,7 @@ def confusion_matrix(class_actual, class_predicted, save=False, path=""):
 
 def show_edges_weight(perceptron: MLP.MLP, save=False, path=""):
     dense = nx.Graph()
-    layers = perceptron.net.layers
+    layers = perceptron.layers
     previous_layer = {}
     current_row = 0
     all_neurons = {}

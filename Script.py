@@ -94,12 +94,12 @@ def run_optimum():
     #classification = [(r'.\data.XOR.train.500.csv', r'.\data.XOR.test.500.csv')]
     #regression = [(r'.\data.square.train.100.csv', r'.\data.square.test.100.csv')]
 
-    learning_rate = 0.25
+    learning_rate = 1.0
     momentum = 0.1
     bias = True
     batch_size = 0.25
-    layers = [5, 5, 5]
-    rng = 1337
+    layers = [4, 4, 4]
+    rng = 6235
     epoch = 100000
     function = "sigmoid"
 
